@@ -1,0 +1,424 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import {
+  Search,
+  Download,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/utils';
+import { useModal } from '@/context/modal-context';
+import { useCRM } from '@/context/crm-context';
+
+const ITEMS_PER_PAGE = 5;
+
+export default function ClientsPage() {
+  const { openNewCompany } = useModal();
+  const { companies, deleteCompany, profile, showToast } = useCRM();
+
+  const [activeFilter, setActiveFilter] = useState<'all' | 'clients' | 'prospects' | 'partners'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const countAll = companies.length;
+  const countClients = companies.filter((c) => c.status.includes('Client')).length;
+  const countProspects = companies.filter((c) => c.status === 'Offre en cours').length;
+  const countPartners = companies.filter((c) => c.status === 'Découverte').length;
+
+  const totalVolume = companies.reduce((sum, c) => sum + c.cumulativeValue, 0);
+
+  const filteredCompanies = companies.filter((comp) => {
+    if (activeFilter === 'clients' && !comp.status.includes('Client')) return false;
+    if (activeFilter === 'prospects' && comp.status !== 'Offre en cours') return false;
+    if (activeFilter === 'partners' && comp.status !== 'Découverte') return false;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        comp.name.toLowerCase().includes(q) ||
+        comp.sector.toLowerCase().includes(q) ||
+        comp.city.toLowerCase().includes(q) ||
+        comp.primaryContact.name.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const paginatedCompanies = filteredCompanies.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const handleFilterChange = (f: 'all' | 'clients' | 'prospects' | 'partners') => {
+    setActiveFilter(f);
+    setCurrentPage(1);
+  };
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Societe',
+      'Secteur',
+      'Ville',
+      'Interlocuteur',
+      'Fonction',
+      'Mandat Principal',
+      'Volume Cumule EUR HT',
+      'Modalites',
+      'Statut',
+    ];
+    const rows = filteredCompanies.map((c) => [
+      `"${c.name.replace(/"/g, '""')}"`,
+      `"${c.sector.replace(/"/g, '""')}"`,
+      `"${c.city.replace(/"/g, '""')}"`,
+      `"${c.primaryContact.name.replace(/"/g, '""')}"`,
+      `"${c.primaryContact.role.replace(/"/g, '""')}"`,
+      `"${c.activeDealsDescription.replace(/"/g, '""')}"`,
+      c.cumulativeValue,
+      `"${c.paymentTerms.replace(/"/g, '""')}"`,
+      `"${c.status}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `repertoire-clients-verve-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Export CSV téléchargé (${filteredCompanies.length} sociétés)`);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 1. Header & Ledger Totals */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <div className="text-xs font-medium text-[#6B7280] mb-1">
+            Base de comptes — {profile.agency}
+          </div>
+          <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold text-[#111827] tracking-tight">
+            Répertoire sociétés &amp; interlocuteurs
+          </h1>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-[#E4E7EC] bg-white border border-[#E4E7EC] rounded-xl overflow-hidden shadow-2xs md:shrink-0">
+          <div className="px-4 sm:px-5 py-2.5">
+            <div className="text-[11px] font-medium text-[#6B7280]">
+              Sociétés suivies
+            </div>
+            <div className="font-display text-base sm:text-lg font-bold text-[#111827] tabular-nums mt-0.5">
+              {countAll} comptes
+            </div>
+          </div>
+          <div className="px-4 sm:px-5 py-2.5">
+            <div className="text-[11px] font-medium text-[#6B7280]">
+              Volume cumulé
+            </div>
+            <div className="font-display text-base sm:text-lg font-bold text-[#047857] tabular-nums mt-0.5">
+              {formatCurrency(totalVolume)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Search & Segmented Filters */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div className="inline-flex items-center p-1 bg-white border border-[#E4E7EC] rounded-lg overflow-x-auto self-start max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => handleFilterChange('all')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              activeFilter === 'all'
+                ? 'bg-[#047857] text-white font-semibold'
+                : 'text-[#4B5563] hover:text-[#111827]'
+            }`}
+          >
+            Toutes ({countAll})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleFilterChange('clients')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              activeFilter === 'clients'
+                ? 'bg-[#047857] text-white font-semibold'
+                : 'text-[#4B5563] hover:text-[#111827]'
+            }`}
+          >
+            Clients sous contrat ({countClients})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleFilterChange('prospects')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              activeFilter === 'prospects'
+                ? 'bg-[#047857] text-white font-semibold'
+                : 'text-[#4B5563] hover:text-[#111827]'
+            }`}
+          >
+            Offre en cours ({countProspects})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleFilterChange('partners')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              activeFilter === 'partners'
+                ? 'bg-[#047857] text-white font-semibold'
+                : 'text-[#4B5563] hover:text-[#111827]'
+            }`}
+          >
+            Qualification ({countPartners})
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2.5">
+          <div className="relative col-span-2 sm:col-span-1 sm:flex-1 sm:w-64">
+            <Search className="w-3.5 h-3.5 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Rechercher société, ville, contact..."
+              className="w-full h-9 pl-8 pr-3 bg-white rounded-lg text-xs text-[#111827] placeholder:text-[#9CA3AF] border border-[#E4E7EC] focus:border-[#047857] outline-none transition-colors"
+            />
+          </div>
+
+          <Button variant="secondary" size="md" onClick={handleExportCSV} className="w-full sm:w-auto">
+            <Download className="w-3.5 h-3.5 text-[#4B5563]" />
+            <span>Exporter CSV</span>
+          </Button>
+
+          <Button variant="primary" size="md" onClick={openNewCompany} className="w-full sm:w-auto">
+            <Plus className="w-4 h-4" />
+            <span>Nouvelle société</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* 3. Directory Ledger Table */}
+      <div className="bg-white border border-[#E4E7EC] rounded-xl overflow-hidden shadow-2xs">
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[#E4E7EC] bg-[#F9FAFB] text-xs font-semibold text-[#4B5563]">
+                <th className="px-6 py-3.5">Société &amp; Secteur</th>
+                <th className="px-6 py-3.5">Interlocuteur principal</th>
+                <th className="px-6 py-3.5">Mandat rattaché</th>
+                <th className="px-6 py-3.5 text-right">Volume cumulé</th>
+                <th className="px-6 py-3.5">Statut</th>
+                <th className="px-6 py-3.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E4E7EC] text-xs">
+              {paginatedCompanies.map((comp) => (
+                <tr key={comp.id} className="hover:bg-[#F9FAFB] transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-md bg-[#F3F4F6] text-[#111827] border border-[#E4E7EC] flex items-center justify-center text-xs font-bold shrink-0">
+                        {comp.initials}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm text-[#111827]">
+                          {comp.name}
+                        </div>
+                        <div className="text-xs text-[#6B7280] mt-0.5">
+                          {comp.sector}, {comp.city}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-[#111827]">
+                      {comp.primaryContact.name}
+                    </div>
+                    <div className="text-xs text-[#6B7280] mt-0.5">
+                      {comp.primaryContact.role}
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-[#111827]">
+                      {comp.activeDealsDescription}
+                    </div>
+                    <div className="text-[11px] text-[#6B7280] mt-0.5">
+                      {comp.activeDealsCount} dossier actif
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4 text-right">
+                    <div className="font-display font-bold text-sm text-[#111827] tabular-nums">
+                      {formatCurrency(comp.cumulativeValue)}
+                    </div>
+                    <div className="text-[11px] text-[#6B7280] mt-0.5">
+                      {comp.paymentTerms}
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
+                        comp.status === 'Offre en cours'
+                          ? 'bg-[#FFFBEB] text-[#B45309]'
+                          : comp.status === 'Client Récurrent' || comp.status === 'Client Actif'
+                          ? 'bg-[#ECFDF5] text-[#047857]'
+                          : 'bg-[#F3F4F6] text-[#4B5563]'
+                      }`}
+                    >
+                      {comp.status}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Link href={`/deals/${comp.primaryDealId || 'deal-lumina'}`}>
+                        <Button variant="secondary" size="sm">
+                          Dossier
+                        </Button>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => deleteCompany(comp.id)}
+                        title={`Retirer ${comp.name}`}
+                        className="w-8 h-8 rounded-lg hover:bg-[#FFF1F2] flex items-center justify-center text-[#6B7280] hover:text-[#BE123C] transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {paginatedCompanies.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-sm text-[#6B7280]">
+                    Aucune société ne correspond à votre recherche.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="lg:hidden divide-y divide-[#E4E7EC]">
+          {paginatedCompanies.map((comp) => (
+            <div key={comp.id} className="p-4 space-y-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-sm text-[#111827]">{comp.name}</div>
+                  <div className="text-xs text-[#6B7280]">
+                    {comp.sector}, {comp.city}
+                  </div>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                    comp.status === 'Offre en cours'
+                      ? 'bg-[#FFFBEB] text-[#B45309]'
+                      : comp.status === 'Client Récurrent' || comp.status === 'Client Actif'
+                      ? 'bg-[#ECFDF5] text-[#047857]'
+                      : 'bg-[#F3F4F6] text-[#4B5563]'
+                  }`}
+                >
+                  {comp.status}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-[#4B5563]">
+                  {comp.primaryContact.name} ({comp.primaryContact.role})
+                </span>
+                <span className="font-display font-bold text-sm text-[#111827] tabular-nums">
+                  {formatCurrency(comp.cumulativeValue)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-[#F3F4F6]">
+                <span className="text-xs text-[#6B7280] truncate max-w-[65%]">
+                  {comp.activeDealsDescription}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/deals/${comp.primaryDealId || 'deal-lumina'}`}
+                    className="text-xs font-semibold text-[#047857] hover:underline"
+                  >
+                    Ouvrir
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => deleteCompany(comp.id)}
+                    className="p-1 text-[#6B7280] hover:text-[#BE123C]"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        <div className="px-6 py-3.5 bg-[#F9FAFB] border-t border-[#E4E7EC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B7280]">
+          <div>
+            Affichage de{' '}
+            <span className="font-semibold text-[#111827]">
+              {filteredCompanies.length === 0 ? 0 : startIndex + 1}–
+              {Math.min(startIndex + ITEMS_PER_PAGE, filteredCompanies.length)}
+            </span>{' '}
+            sur <span className="font-semibold text-[#111827]">{filteredCompanies.length}</span>{' '}
+            sociétés
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="h-7 px-2.5 rounded-md bg-white border border-[#E4E7EC] text-[#111827] hover:bg-[#F3F4F6] disabled:opacity-40 disabled:pointer-events-none text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Précédent</span>
+            </button>
+
+            {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setCurrentPage(p)}
+                className={`w-7 h-7 rounded-md text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${
+                  safePage === p
+                    ? 'bg-[#047857] text-white'
+                    : 'bg-white hover:bg-[#F3F4F6] text-[#111827] border border-[#E4E7EC]'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              disabled={safePage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="h-7 px-2.5 rounded-md bg-white border border-[#E4E7EC] text-[#111827] hover:bg-[#F3F4F6] disabled:opacity-40 disabled:pointer-events-none text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <span>Suivant</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
