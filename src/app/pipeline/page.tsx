@@ -505,71 +505,84 @@ export default function PipelinePage() {
                               </p>
                             </Link>
 
-                            {/* Amount + next action */}
-                            <div className="pt-3 border-t border-[#F3F4F6] space-y-1.5">
-                              <div className="font-display font-bold text-base text-[#111827] tabular-nums">
-                                {formatCurrency(deal.amount)}
+                            {/* Amount + next action + priority stepper */}
+                            <div className="pt-2.5 border-t border-[#F3F4F6] flex items-center justify-between gap-2">
+                              <div className="space-y-0.5 min-w-0 flex-1">
+                                <div className="font-display font-bold text-base text-[#111827] tabular-nums">
+                                  {formatCurrency(deal.amount)}
+                                </div>
+                                <div className="text-xs text-[#6B7280] flex items-center gap-1.5 leading-snug">
+                                  <Clock className="w-3.5 h-3.5 text-[#9CA3AF] shrink-0" />
+                                  <span className="truncate">{deal.nextAction}</span>
+                                </div>
                               </div>
-                              <div className="text-xs text-[#6B7280] flex items-start gap-1.5 leading-snug">
-                                <Clock className="w-3.5 h-3.5 text-[#9CA3AF] shrink-0 mt-px" />
-                                <span>{deal.nextAction}</span>
+
+                              {/* Priority stepper (accessible alternative to drag-and-drop) */}
+                              <div className="flex flex-col items-center shrink-0 bg-[#F9FAFB] border border-[#E5E7EB] rounded-md overflow-hidden">
+                                <button
+                                  type="button"
+                                  disabled={dealIdx === 0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveDealPriority(deal.id, 'up');
+                                    if (sortBy !== 'manual') setSortBy('manual');
+                                  }}
+                                  className="p-1 hover:text-[#047857] hover:bg-white text-[#9CA3AF] disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
+                                  title="Monter en priorité"
+                                  aria-label="Monter en priorité"
+                                >
+                                  <ChevronUp className="w-3 h-3" />
+                                </button>
+                                <div className="w-full h-px bg-[#E5E7EB]" />
+                                <button
+                                  type="button"
+                                  disabled={dealIdx === stageDeals.length - 1}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveDealPriority(deal.id, 'down');
+                                    if (sortBy !== 'manual') setSortBy('manual');
+                                  }}
+                                  className="p-1 hover:text-[#047857] hover:bg-white text-[#9CA3AF] disabled:opacity-20 disabled:pointer-events-none transition-colors cursor-pointer"
+                                  title="Descendre en priorité"
+                                  aria-label="Descendre en priorité"
+                                >
+                                  <ChevronDown className="w-3 h-3" />
+                                </button>
                               </div>
                             </div>
 
-                            {/* Quick controls */}
-                            <div className="flex items-center justify-between gap-1 -mx-1">
+                            {/* Quick stage controls & open */}
+                            <div className="pt-2 border-t border-[#F3F4F6] flex items-center justify-between gap-1">
                               <button
                                 type="button"
                                 disabled={stageIdx === 0}
-                                onClick={() => stepStage(deal.id, deal.stageId, -1)}
-                                className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded text-xs font-medium text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  stepStage(deal.id, deal.stageId, -1);
+                                }}
+                                className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] font-medium text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
                                 title="Étape précédente"
                               >
                                 <ChevronLeft className="w-3.5 h-3.5" />
                                 <span>Reculer</span>
                               </button>
 
-                              <div className="flex items-center gap-0.5">
-                                <button
-                                  type="button"
-                                  disabled={dealIdx === 0}
-                                  onClick={() => {
-                                    moveDealPriority(deal.id, 'up');
-                                    if (sortBy !== 'manual') setSortBy('manual');
-                                  }}
-                                  className="p-1 rounded text-[#9CA3AF] hover:text-[#047857] hover:bg-[#F3F4F6] disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer"
-                                  title="Monter en priorité"
-                                  aria-label="Monter en priorité"
-                                >
-                                  <ChevronUp className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={dealIdx === stageDeals.length - 1}
-                                  onClick={() => {
-                                    moveDealPriority(deal.id, 'down');
-                                    if (sortBy !== 'manual') setSortBy('manual');
-                                  }}
-                                  className="p-1 rounded text-[#9CA3AF] hover:text-[#047857] hover:bg-[#F3F4F6] disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer"
-                                  title="Descendre en priorité"
-                                  aria-label="Descendre en priorité"
-                                >
-                                  <ChevronDown className="w-3.5 h-3.5" />
-                                </button>
-                                <Link
-                                  href={`/deals/${deal.id}`}
-                                  draggable={false}
-                                  className="px-1.5 py-1 text-xs font-semibold text-[#047857] hover:underline"
-                                >
-                                  Ouvrir
-                                </Link>
-                              </div>
+                              <Link
+                                href={`/deals/${deal.id}`}
+                                draggable={false}
+                                className="px-2 py-1 rounded-md text-[11px] font-semibold text-[#047857] hover:text-[#065F46] hover:bg-[#ECFDF5] transition-colors shrink-0 text-center"
+                              >
+                                Ouvrir
+                              </Link>
 
                               <button
                                 type="button"
                                 disabled={stageIdx === STAGES.length - 1}
-                                onClick={() => stepStage(deal.id, deal.stageId, 1)}
-                                className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded text-xs font-medium text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  stepStage(deal.id, deal.stageId, 1);
+                                }}
+                                className="inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] font-medium text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6] disabled:opacity-25 disabled:pointer-events-none transition-colors cursor-pointer shrink-0"
                                 title="Étape suivante"
                               >
                                 <span>Avancer</span>
