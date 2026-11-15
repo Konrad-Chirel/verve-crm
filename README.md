@@ -1,6 +1,6 @@
 # Verve CRM — Pilotage Commercial & Mandats B2B
 
-![CI Status](https://github.com/Chirel-Konrad/verve-crm/actions/workflows/ci.yml/badge.svg)
+![CI Status](https://github.com/Konrad-Chirel/verve-crm/actions/workflows/ci.yml/badge.svg)
 
 Application web SaaS de gestion commerciale, de suivi des mandats et de pilotage de trésorerie conçue pour les **cabinets de conseil**, **agences digitales** et **structures de services B2B**.
 
@@ -69,7 +69,7 @@ L'outil associe une direction artistique éditoriale (**« Noble Emerald »**, d
 ### 1. Cloner et installer les dépendances
 
 ```bash
-git clone https://github.com/Chirel-Konrad/verve-crm.git
+git clone https://github.com/Konrad-Chirel/verve-crm.git
 cd verve-crm
 npm install
 ```
