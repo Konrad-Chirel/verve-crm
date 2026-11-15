@@ -10,6 +10,7 @@ import {
   Building2,
   TrendingUp,
   SlidersHorizontal,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BRAND } from '@/lib/brand';
@@ -18,7 +19,7 @@ import { useCRM } from '@/context/crm-context';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { deals, companies, relances, profile } = useCRM();
+  const { deals, companies, relances, profile, signOut } = useCRM();
 
   const activeRelancesCount = relances.filter((r) => !r.done).length;
 
@@ -183,10 +184,10 @@ export function Sidebar() {
       </div>
 
       {/* Bottom User Card */}
-      <div className="p-3 border-t border-[#E4E7EC]">
+      <div className="p-3 border-t border-[#E4E7EC] flex items-center justify-between gap-1">
         <Link
           href="/parametres"
-          className="flex items-center justify-between p-2 rounded-lg hover:bg-[#F3F4F6] transition-colors xl:gap-2.5 group"
+          className="flex items-center p-2 rounded-lg hover:bg-[#F3F4F6] transition-colors xl:gap-2.5 group min-w-0 flex-1"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <Avatar
@@ -204,6 +205,15 @@ export function Sidebar() {
             </div>
           </div>
         </Link>
+        <button
+          type="button"
+          onClick={signOut}
+          title="Se déconnecter"
+          aria-label="Se déconnecter"
+          className="hidden xl:flex w-8 h-8 rounded-lg items-center justify-center text-[#6B7280] hover:text-[#E11D48] hover:bg-[#FFF1F2] transition-colors shrink-0 cursor-pointer"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </aside>
   );

@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Check, RotateCcw } from 'lucide-react';
+import { Check, RotateCcw, LogOut, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCRM } from '@/context/crm-context';
 
 export default function ParametresPage() {
-  const { profile, updateProfile, resetDemoData } = useCRM();
+  const { profile, updateProfile, resetDemoData, user, isCloudSynced, signOut } = useCRM();
 
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState(profile.name);
@@ -159,7 +159,7 @@ export default function ParametresPage() {
             Données de démonstration
           </h3>
           <p className="text-xs text-[#6B7280] max-w-lg">
-            Vos modifications sont sauvegardées automatiquement dans votre navigateur. Vous pouvez restaurer l’état initial des dossiers à tout moment.
+            Vos modifications sont sauvegardées automatiquement. Vous pouvez restaurer l’état initial des dossiers à tout moment.
           </p>
         </div>
         <Button
@@ -171,6 +171,36 @@ export default function ParametresPage() {
         >
           <RotateCcw className="w-3.5 h-3.5 text-[#4B5563]" />
           <span>Réinitialiser les données</span>
+        </Button>
+      </div>
+
+      {/* Session & Backend Status Section */}
+      <div className="bg-white border border-[#E4E7EC] rounded-xl shadow-2xs p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-[#047857]" />
+            <h3 className="font-display font-bold text-sm text-[#111827]">
+              Session &amp; Synchronisation Backend
+            </h3>
+            <span className="px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#047857] text-[11px] font-semibold">
+              {user ? (isCloudSynced ? 'Supabase PostgreSQL' : 'Authentifié Supabase') : 'Mode Démo'}
+            </span>
+          </div>
+          <p className="text-xs text-[#6B7280] max-w-lg">
+            {user
+              ? `Connecté avec le compte ${user.email || profile.email}. Vos dossiers sont associés à votre identifiant d’organisation.`
+              : 'Vous naviguez actuellement en mode démonstration locale. Connectez-vous pour synchroniser vos dossiers sur Supabase.'}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          onClick={signOut}
+          className="w-full sm:w-auto shrink-0 text-[#E11D48] hover:text-[#BE123C]"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>{user ? 'Se déconnecter' : 'Aller à la connexion'}</span>
         </Button>
       </div>
     </div>

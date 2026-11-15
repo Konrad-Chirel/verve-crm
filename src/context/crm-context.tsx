@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 import {
   MOCK_DEALS,
   MOCK_COMPANIES,
@@ -14,6 +15,7 @@ import {
   type StageId,
 } from '@/lib/mock-data';
 import { BRAND } from '@/lib/brand';
+import { createClient } from '@/lib/supabase/client';
 import { CheckCircle2 } from 'lucide-react';
 
 export interface UserProfile {
@@ -35,6 +37,9 @@ export interface CRMNotification {
 }
 
 interface CRMContextType {
+  user: User | null;
+  isDemoMode: boolean;
+  isCloudSynced: boolean;
   deals: Deal[];
   companies: Company[];
   relances: Relance[];
@@ -43,6 +48,8 @@ interface CRMContextType {
   notifications: CRMNotification[];
   toastMessage: string | null;
   showToast: (msg: string) => void;
+  enableDemoMode: () => void;
+  signOut: () => Promise<void>;
   addDeal: (input: {
     title: string;
     companyName: string;
@@ -135,7 +142,117 @@ function getInitials(text: string): string {
   return text.slice(0, 2).toUpperCase();
 }
 
+function mapDealToRow(d: Deal, userId: string, position = 0) {
+  return {
+    id: d.id,
+    user_id: userId,
+    title: d.title,
+    company_id: d.companyId,
+    company_name: d.companyName,
+    company_city: d.companyCity || 'Paris',
+    company_sector: d.companySector || 'Conseil & Tech B2B',
+    contact_name: d.contactName,
+    contact_role: d.contactRole,
+    contact_email: d.contactEmail,
+    contact_phone: d.contactPhone,
+    company_initials: d.companyInitials,
+    company_color: d.companyColor,
+    amount: d.amount,
+    probability: d.probability,
+    stage_id: d.stageId,
+    status_badge: d.statusBadge,
+    badge_type: d.badgeType || 'normal',
+    next_action: d.nextAction || '',
+    next_action_date: d.nextActionDate || '',
+    meta_info: d.metaInfo || [],
+    notes: d.notes || '',
+    document_name: d.documentName || '',
+    document_size: d.documentSize || '',
+    position,
+    created_at: d.createdAt,
+  };
+}
+
+function mapRowToDeal(r: any): Deal {
+  return {
+    id: r.id,
+    title: r.title,
+    companyId: r.company_id || '',
+    companyName: r.company_name,
+    companyCity: r.company_city || 'Paris',
+    companySector: r.company_sector || 'Conseil & Tech B2B',
+    contactName: r.contact_name || '',
+    contactRole: r.contact_role || 'Directeur Général',
+    contactEmail: r.contact_email || '',
+    contactPhone: r.contact_phone || '',
+    companyInitials: r.company_initials || getInitials(r.company_name || 'VC'),
+    companyColor: r.company_color || 'bg-primary text-white',
+    amount: Number(r.amount) || 0,
+    probability: Number(r.probability) ?? 25,
+    stageId: (r.stage_id as StageId) || 'lead',
+    statusBadge: r.status_badge || 'Dossier actif',
+    badgeType: r.badge_type || 'normal',
+    nextAction: r.next_action || undefined,
+    nextActionDate: r.next_action_date || undefined,
+    metaInfo: Array.isArray(r.meta_info) ? r.meta_info : [],
+    notes: r.notes || undefined,
+    documentName: r.document_name || undefined,
+    documentSize: r.document_size || undefined,
+    createdAt: r.created_at || new Date().toISOString().slice(0, 10),
+  };
+}
+
+function mapCompanyToRow(c: Company, userId: string) {
+  return {
+    id: c.id,
+    user_id: userId,
+    primary_deal_id: c.primaryDealId,
+    name: c.name,
+    sector: c.sector,
+    city: c.city,
+    initials: c.initials,
+    color: c.color,
+    primary_contact: c.primaryContact,
+    active_deals_count: c.activeDealsCount,
+    active_deals_description: c.activeDealsDescription,
+    cumulative_value: c.cumulativeValue,
+    payment_terms: c.paymentTerms,
+    status: c.status,
+    status_color: c.statusColor,
+  };
+}
+
+function mapRowToCompany(r: any): Company {
+  return {
+    id: r.id,
+    primaryDealId: r.primary_deal_id || '',
+    name: r.name,
+    sector: r.sector || 'Services & Tech B2B',
+    city: r.city || 'Paris',
+    initials: r.initials || getInitials(r.name || 'VC'),
+    color: r.color || 'bg-primary text-white',
+    primaryContact: r.primary_contact || {
+      name: 'Contact principal',
+      role: 'Directeur Général',
+      email: '',
+      phone: '',
+      initials: 'CP',
+    },
+    activeDealsCount: Number(r.active_deals_count) || 1,
+    activeDealsDescription: r.active_deals_description || '',
+    cumulativeValue: Number(r.cumulative_value) || 0,
+    paymentTerms: r.payment_terms || 'Échéance 30j',
+    status: r.status || 'Offre en cours',
+    statusColor: r.status_color || 'primary',
+  };
+}
+
 export function CRMProvider({ children }: { children: React.ReactNode }) {
+  const supabase = createClient();
+
+  const [user, setUser] = useState<User | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+  const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
   const [deals, setDeals] = useState<Deal[]>(MOCK_DEALS);
   const [companies, setCompanies] = useState<Company[]>(MOCK_COMPANIES);
   const [relances, setRelances] = useState<Relance[]>(MOCK_RELANCES);
@@ -155,33 +272,160 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
-  // Hydrate from localStorage on client mount
+  const storageKeyForUser = useCallback(
+    (uid?: string | null) => (uid ? `${STORAGE_KEY}_${uid}` : STORAGE_KEY),
+    []
+  );
+
+  // Hydrate from localStorage + Supabase Auth / PostgreSQL on mount
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed.deals) && parsed.deals.length > 0) setDeals(parsed.deals);
-        if (Array.isArray(parsed.companies) && parsed.companies.length > 0)
-          setCompanies(parsed.companies);
-        if (Array.isArray(parsed.relances)) setRelances(parsed.relances);
-        if (Array.isArray(parsed.activities)) setActivities(parsed.activities);
-        if (parsed.profile) setProfile({ ...INITIAL_PROFILE, ...parsed.profile });
-        if (Array.isArray(parsed.notifications)) setNotifications(parsed.notifications);
+    let mounted = true;
+
+    const loadLocal = (uid?: string | null) => {
+      try {
+        const raw =
+          window.localStorage.getItem(storageKeyForUser(uid)) ||
+          window.localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.deals) && parsed.deals.length > 0) setDeals(parsed.deals);
+          if (Array.isArray(parsed.companies) && parsed.companies.length > 0)
+            setCompanies(parsed.companies);
+          if (Array.isArray(parsed.relances)) setRelances(parsed.relances);
+          if (Array.isArray(parsed.activities)) setActivities(parsed.activities);
+          if (parsed.profile) setProfile({ ...INITIAL_PROFILE, ...parsed.profile });
+          if (Array.isArray(parsed.notifications)) setNotifications(parsed.notifications);
+        }
+      } catch {
+        // Ignore storage errors
       }
-    } catch {
-      // Ignore storage errors
-    } finally {
-      setHydrated(true);
-    }
-  }, []);
+    };
+
+    const loadFromSupabase = async (authUser: User) => {
+      if (!supabase) return;
+      const metaName =
+        authUser.user_metadata?.full_name ||
+        authUser.user_metadata?.name ||
+        INITIAL_PROFILE.name;
+      const metaAgency = authUser.user_metadata?.agency_name || INITIAL_PROFILE.agency;
+      const metaRole = authUser.user_metadata?.role || INITIAL_PROFILE.role;
+      const metaEmail = authUser.email || INITIAL_PROFILE.email;
+
+      setProfile((prev) => ({
+        ...prev,
+        name: metaName,
+        agency: metaAgency,
+        role: metaRole,
+        email: metaEmail,
+      }));
+
+      try {
+        const [profRes, dealsRes, compRes] = await Promise.all([
+          supabase.from('verve_profiles').select('*').eq('id', authUser.id).maybeSingle(),
+          supabase
+            .from('verve_deals')
+            .select('*')
+            .eq('user_id', authUser.id)
+            .order('position', { ascending: true }),
+          supabase.from('verve_companies').select('*').eq('user_id', authUser.id),
+        ]);
+
+        if (!mounted) return;
+
+        // If the `verve_*` tables exist in Supabase, sync with them
+        if (!dealsRes.error) {
+          setIsCloudSynced(true);
+
+          if (profRes.data) {
+            setProfile({
+              name: profRes.data.name || metaName,
+              role: profRes.data.role || metaRole,
+              agency: profRes.data.agency || metaAgency,
+              email: profRes.data.email || metaEmail,
+              monthlyTarget: Number(profRes.data.monthly_target) || 50000,
+              quarterlyTarget: Number(profRes.data.quarterly_target) || 160000,
+            });
+          } else {
+            await supabase.from('verve_profiles').upsert({
+              id: authUser.id,
+              email: metaEmail,
+              name: metaName,
+              role: metaRole,
+              agency: metaAgency,
+              monthly_target: 50000,
+              quarterly_target: 160000,
+            });
+          }
+
+          if (Array.isArray(dealsRes.data) && dealsRes.data.length > 0) {
+            setDeals(dealsRes.data.map(mapRowToDeal));
+          } else {
+            // Seed initial portfolio deals for a newly created account
+            await supabase
+              .from('verve_deals')
+              .upsert(MOCK_DEALS.map((d, idx) => mapDealToRow(d, authUser.id, idx)));
+          }
+
+          if (Array.isArray(compRes.data) && compRes.data.length > 0) {
+            setCompanies(compRes.data.map(mapRowToCompany));
+          } else {
+            await supabase
+              .from('verve_companies')
+              .upsert(MOCK_COMPANIES.map((c) => mapCompanyToRow(c, authUser.id)));
+          }
+        }
+      } catch {
+        // Fallback to localStorage seamlessly if tables are not created yet
+      }
+    };
+
+    const init = async () => {
+      const hasDemo = document.cookie.includes('verve_demo_mode=1');
+      setIsDemoMode(hasDemo);
+      loadLocal(null);
+
+      if (supabase) {
+        const { data } = await supabase.auth.getSession();
+        const sessionUser = data.session?.user ?? null;
+        if (mounted) {
+          setUser(sessionUser);
+          if (sessionUser) {
+            setIsDemoMode(false);
+            loadLocal(sessionUser.id);
+            await loadFromSupabase(sessionUser);
+          }
+        }
+      }
+      if (mounted) setHydrated(true);
+    };
+
+    init();
+
+    if (!supabase) return;
+    const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+      if (nextUser) {
+        setIsDemoMode(false);
+        loadLocal(nextUser.id);
+        loadFromSupabase(nextUser);
+      } else {
+        setIsCloudSynced(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [supabase, storageKeyForUser]);
 
   // Persist to localStorage on state changes
   useEffect(() => {
     if (!hydrated) return;
     try {
       window.localStorage.setItem(
-        STORAGE_KEY,
+        storageKeyForUser(user?.id),
         JSON.stringify({
           deals,
           companies,
@@ -194,7 +438,53 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore storage quota errors
     }
-  }, [deals, companies, relances, activities, profile, notifications, hydrated]);
+  }, [deals, companies, relances, activities, profile, notifications, hydrated, user?.id, storageKeyForUser]);
+
+  const enableDemoMode = useCallback(() => {
+    if (typeof document !== 'undefined') {
+      const secureFlag =
+        typeof window !== 'undefined' && window.location.protocol === 'https:'
+          ? '; Secure'
+          : '';
+      document.cookie = `verve_demo_mode=1; path=/; max-age=604800; SameSite=Lax${secureFlag}`;
+    }
+    setIsDemoMode(true);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    if (typeof document !== 'undefined') {
+      const secureFlag =
+        typeof window !== 'undefined' && window.location.protocol === 'https:'
+          ? '; Secure'
+          : '';
+      document.cookie = `verve_demo_mode=; path=/; max-age=0; SameSite=Lax${secureFlag}`;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        if (user?.id) {
+          localStorage.removeItem(storageKeyForUser(user.id));
+        }
+        // Purge any residual user-scoped CRM caches on shared terminals
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith(STORAGE_KEY)) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch {
+        // Ignore storage errors
+      }
+    }
+    setIsDemoMode(false);
+    setIsCloudSynced(false);
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setUser(null);
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+  }, [supabase, user?.id, storageKeyForUser]);
 
   const addDeal: CRMContextType['addDeal'] = (input) => {
     const stageObj = STAGES.find((s) => s.id === input.stageId) || STAGES[0];
@@ -234,7 +524,13 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
     setDeals((prev) => [newDeal, ...prev]);
 
-    // Ensure company also exists or updates in companies list
+    if (supabase && user) {
+      supabase
+        .from('verve_deals')
+        .upsert(mapDealToRow(newDeal, user.id, 0))
+        .then(() => {});
+    }
+
     setCompanies((prev) => {
       const existingIdx = prev.findIndex(
         (c) => c.name.toLowerCase() === input.companyName.toLowerCase()
@@ -242,13 +538,17 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       if (existingIdx > -1) {
         const updated = [...prev];
         const comp = updated[existingIdx];
-        updated[existingIdx] = {
+        const nextComp = {
           ...comp,
           primaryDealId: newDeal.id,
           activeDealsCount: comp.activeDealsCount + 1,
           activeDealsDescription: newDeal.title,
           cumulativeValue: comp.cumulativeValue + newDeal.amount,
         };
+        updated[existingIdx] = nextComp;
+        if (supabase && user) {
+          supabase.from('verve_companies').upsert(mapCompanyToRow(nextComp, user.id)).then(() => {});
+        }
         return updated;
       }
       const newComp: Company = {
@@ -273,10 +573,12 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         status: input.stageId === 'won' ? 'Client Actif' : 'Offre en cours',
         statusColor: 'primary',
       };
+      if (supabase && user) {
+        supabase.from('verve_companies').upsert(mapCompanyToRow(newComp, user.id)).then(() => {});
+      }
       return [newComp, ...prev];
     });
 
-    // Log activity
     const newAct: Activity = {
       id: `act-${Date.now()}`,
       dealId: newDeal.id,
@@ -299,7 +601,16 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
   const updateDeal: CRMContextType['updateDeal'] = (id, patch) => {
     setDeals((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, ...patch } : d))
+      prev.map((d, idx) => {
+        if (d.id === id) {
+          const next = { ...d, ...patch };
+          if (supabase && user) {
+            supabase.from('verve_deals').upsert(mapDealToRow(next, user.id, idx)).then(() => {});
+          }
+          return next;
+        }
+        return d;
+      })
     );
     showToast('Modifications du dossier enregistrées');
   };
@@ -309,10 +620,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     let targetDeal: Deal | undefined;
 
     setDeals((prev) =>
-      prev.map((d) => {
+      prev.map((d, idx) => {
         if (d.id === id) {
           targetDeal = d;
-          return {
+          const next: Deal = {
             ...d,
             stageId: nextStageId,
             probability: stageObj.defaultProbability,
@@ -322,6 +633,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
                 : `Étape : ${stageObj.shortName}`,
             badgeType: nextStageId === 'won' ? 'normal' : d.badgeType,
           };
+          if (supabase && user) {
+            supabase.from('verve_deals').upsert(mapDealToRow(next, user.id, idx)).then(() => {});
+          }
+          return next;
         }
         return d;
       })
@@ -393,31 +708,41 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
           }
         : draggedDeal;
 
-      // Filter out dragged deal from current array
       const listWithoutDragged = prev.filter((d) => d.id !== draggedDealId);
 
-      // If targetDealId is provided, find its index
+      let finalList: Deal[];
       if (targetDealId) {
         const targetIndex = listWithoutDragged.findIndex((d) => d.id === targetDealId);
         if (targetIndex !== -1) {
           const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
           const nextList = [...listWithoutDragged];
           nextList.splice(insertIndex, 0, updatedDeal);
-          return nextList;
+          finalList = nextList;
+        } else {
+          finalList = [...listWithoutDragged, updatedDeal];
+        }
+      } else {
+        const lastIndexOfStage = listWithoutDragged.reduce<number>(
+          (lastIdx, item, idx) => (item.stageId === finalStageId ? idx : lastIdx),
+          -1
+        );
+        if (lastIndexOfStage === -1) {
+          finalList = [...listWithoutDragged, updatedDeal];
+        } else {
+          const nextList = [...listWithoutDragged];
+          nextList.splice(lastIndexOfStage + 1, 0, updatedDeal);
+          finalList = nextList;
         }
       }
 
-      // If no target card (e.g. dropped on empty column or column bottom), append to end of that stage
-      const lastIndexOfStage = listWithoutDragged.reduce<number>(
-        (lastIdx, item, idx) => (item.stageId === finalStageId ? idx : lastIdx),
-        -1
-      );
-      if (lastIndexOfStage === -1) {
-        return [...listWithoutDragged, updatedDeal];
+      if (supabase && user) {
+        supabase
+          .from('verve_deals')
+          .upsert(finalList.map((d, idx) => mapDealToRow(d, user.id, idx)))
+          .then(() => {});
       }
-      const nextList = [...listWithoutDragged];
-      nextList.splice(lastIndexOfStage + 1, 0, updatedDeal);
-      return nextList;
+
+      return finalList;
     });
 
     if (stageChanged && targetDealStageName) {
@@ -473,6 +798,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const deleteDeal: CRMContextType['deleteDeal'] = (id) => {
     const target = deals.find((d) => d.id === id);
     setDeals((prev) => prev.filter((d) => d.id !== id));
+    if (supabase && user) {
+      supabase.from('verve_deals').delete().eq('user_id', user.id).eq('id', id).then(() => {});
+    }
     if (target) {
       showToast(`Dossier « ${target.title} » archivé`);
     }
@@ -538,6 +866,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
     setCompanies((prev) => [newCompany, ...prev]);
     setDeals((prev) => [companionDeal, ...prev]);
+    if (supabase && user) {
+      supabase.from('verve_companies').upsert(mapCompanyToRow(newCompany, user.id)).then(() => {});
+      supabase.from('verve_deals').upsert(mapDealToRow(companionDeal, user.id, 0)).then(() => {});
+    }
     showToast(`Entreprise « ${input.name} » ajoutée au répertoire`);
     return newCompany;
   };
@@ -545,6 +877,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const deleteCompany: CRMContextType['deleteCompany'] = (id) => {
     const target = companies.find((c) => c.id === id);
     setCompanies((prev) => prev.filter((c) => c.id !== id));
+    if (supabase && user) {
+      supabase.from('verve_companies').delete().eq('user_id', user.id).eq('id', id).then(() => {});
+    }
     if (target) {
       showToast(`Entreprise « ${target.name} » retirée du répertoire`);
     }
@@ -599,7 +934,24 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProfile: CRMContextType['updateProfile'] = (patch) => {
-    setProfile((prev) => ({ ...prev, ...patch }));
+    setProfile((prev) => {
+      const next = { ...prev, ...patch };
+      if (supabase && user) {
+        supabase
+          .from('verve_profiles')
+          .upsert({
+            id: user.id,
+            email: next.email,
+            name: next.name,
+            role: next.role,
+            agency: next.agency,
+            monthly_target: next.monthlyTarget,
+            quarterly_target: next.quarterlyTarget,
+          })
+          .then(() => {});
+      }
+      return next;
+    });
     showToast('Paramètres du cabinet mis à jour');
   };
 
@@ -609,6 +961,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetDemoData = () => {
+    window.localStorage.removeItem(storageKeyForUser(user?.id));
     window.localStorage.removeItem(STORAGE_KEY);
     setDeals(MOCK_DEALS);
     setCompanies(MOCK_COMPANIES);
@@ -622,6 +975,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   return (
     <CRMContext.Provider
       value={{
+        user,
+        isDemoMode,
+        isCloudSynced,
         deals,
         companies,
         relances,
@@ -630,6 +986,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         notifications,
         toastMessage,
         showToast,
+        enableDemoMode,
+        signOut,
         addDeal,
         updateDeal,
         moveDealStage,

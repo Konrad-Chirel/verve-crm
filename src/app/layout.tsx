@@ -3,12 +3,7 @@ import './globals.css';
 import { BRAND } from '@/lib/brand';
 import { CRMProvider } from '@/context/crm-context';
 import { ModalProvider } from '@/context/modal-context';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Topbar } from '@/components/layout/topbar';
-import { MobileNav } from '@/components/layout/mobile-nav';
-import { NewDealModal } from '@/components/modals/new-deal-modal';
-import { NewCompanyModal } from '@/components/modals/new-company-modal';
-import { CommandPalette } from '@/components/layout/command-palette';
+import { AppShell } from '@/components/layout/app-shell';
 
 export const metadata: Metadata = {
   title: `${BRAND.name} — ${BRAND.subtitle}`,
@@ -37,26 +32,7 @@ export default function RootLayout({
       <body className="font-sans bg-canvas text-text-primary min-h-screen antialiased overflow-x-hidden selection:bg-[#A7F3D0] selection:text-[#005d42]">
         <CRMProvider>
           <ModalProvider>
-            {/* Desktop & Tablet Sidebar */}
-            <Sidebar />
-
-            {/* Top Bar Header */}
-            <Topbar />
-
-            {/* Main Workspace Canvas */}
-            <main className="md:pl-[68px] xl:pl-60 pt-16 pb-24 md:pb-12 min-h-screen">
-              <div className="max-w-[1520px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                {children}
-              </div>
-            </main>
-
-            {/* Mobile Bottom Navigation Bar */}
-            <MobileNav />
-
-            {/* Global Modals & Command Palette */}
-            <NewDealModal />
-            <NewCompanyModal />
-            <CommandPalette />
+            <AppShell>{children}</AppShell>
           </ModalProvider>
         </CRMProvider>
       </body>
