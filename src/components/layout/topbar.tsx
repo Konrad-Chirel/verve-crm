@@ -11,6 +11,8 @@ import {
   ArrowRight,
   TrendingUp,
   SlidersHorizontal,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BRAND } from '@/lib/brand';
@@ -20,7 +22,7 @@ import { formatCurrency } from '@/lib/utils';
 
 export function Topbar() {
   const { openNewDeal, openCommandPalette } = useModal();
-  const { deals, profile, notifications, markAllNotificationsRead } = useCRM();
+  const { deals, profile, notifications, markAllNotificationsRead, theme, toggleTheme } = useCRM();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -109,6 +111,21 @@ export function Topbar() {
               </strong>
             </span>
           </Link>
+
+          {/* Theme Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+            aria-label="Basculer le thème"
+            className="w-9 h-9 rounded-lg bg-white hover:bg-[#F9FAFB] border border-[#E4E7EC] flex items-center justify-center text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-[#34D399]" />
+            ) : (
+              <Moon className="w-4 h-4" />
+            )}
+          </button>
 
           {/* Interactive Notification Bell + Popover */}
           <div className="relative" ref={notifRef}>

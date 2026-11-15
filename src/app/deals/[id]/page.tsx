@@ -17,6 +17,7 @@ import {
   CalendarDays,
   Trash2,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ export default function DealDetailPage() {
   const [activeTab, setActiveTab] = useState<'note' | 'appel' | 'tache'>('note');
   const [noteContent, setNoteContent] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Remembers which stage the mobile stepper was last centred on (avoids re-scrolling on every render).
   const centeredStageRef = useRef<string>('');
@@ -490,7 +492,7 @@ export default function DealDetailPage() {
 
             <button
               type="button"
-              onClick={handleDeleteDeal}
+              onClick={() => setConfirmDeleteOpen(true)}
               title="Supprimer ce dossier"
               className="h-8 px-2.5 rounded-lg border border-[#E4E7EC] text-[#6B7280] hover:text-[#BE123C] hover:border-[#FECDD3] hover:bg-[#FFF1F2] transition-colors flex items-center gap-1 text-xs cursor-pointer"
             >
@@ -860,6 +862,65 @@ export default function DealDetailPage() {
         hidden
         onChange={handleFileAttach}
       />
+
+      {/* Confirm Delete Deal Modal */}
+      {confirmDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111827]/40 backdrop-blur-[2px]">
+          <div
+            className="fixed inset-0"
+            onClick={() => setConfirmDeleteOpen(false)}
+            aria-hidden="true"
+          />
+
+          <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-[#E4E7EC] overflow-hidden z-10 p-5 sm:p-6 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-[#FFF1F2] border border-[#FECDD3] text-[#BE123C] flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-base font-bold text-[#111827]">
+                  Confirmer la suppression du dossier
+                </h2>
+                <p className="text-xs text-[#4B5563] mt-1 leading-relaxed">
+                  Voulez-vous vraiment supprimer le mandat{' '}
+                  <strong className="text-[#111827] font-semibold">« {deal.title} »</strong>{' '}
+                  ({deal.companyName}) du pipeline ?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-[#F9FAFB] border border-[#E4E7EC] flex items-center justify-between text-xs">
+              <span className="text-[#6B7280]">{deal.contactName} — {currentStageObj.name}</span>
+              <span className="font-display font-bold text-[#111827] tabular-nums">
+                {formatCurrency(deal.amount)}
+              </span>
+            </div>
+
+            <div className="pt-3 grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 border-t border-[#E4E7EC]">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => setConfirmDeleteOpen(false)}
+                className="w-full sm:w-auto h-10 sm:h-9 whitespace-nowrap"
+              >
+                Annuler
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDeleteOpen(false);
+                  handleDeleteDeal();
+                }}
+                className="h-10 sm:h-9 px-4 rounded-lg bg-[#BE123C] hover:bg-[#9F1239] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto whitespace-nowrap"
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

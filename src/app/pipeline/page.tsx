@@ -419,7 +419,10 @@ export default function PipelinePage() {
                 {/* Column Header */}
                 <div className="px-1 pt-0.5 pb-2 border-b border-[#E4E7EC] flex items-center justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-2.5 h-2.5 rounded-xs shrink-0 ${stage.dotColor}`} />
+                    <span
+                      className="w-2.5 h-2.5 rounded-xs shrink-0"
+                      style={{ backgroundColor: stage.colorHex }}
+                    />
                     <h2 className="font-display font-bold text-sm text-[#111827] truncate">
                       {stage.name}
                     </h2>

@@ -40,6 +40,8 @@ interface CRMContextType {
   user: User | null;
   isDemoMode: boolean;
   isCloudSynced: boolean;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
   deals: Deal[];
   companies: Company[];
   relances: Relance[];
@@ -268,6 +270,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [isCloudSynced, setIsCloudSynced] = useState<boolean>(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [deals, setDeals] = useState<Deal[]>(MOCK_DEALS);
   const [companies, setCompanies] = useState<Company[]>(MOCK_COMPANIES);
   const [relances, setRelances] = useState<Relance[]>(MOCK_RELANCES);
@@ -395,6 +398,18 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     };
 
     const init = async () => {
+      try {
+        const savedTheme = window.localStorage.getItem('verve_theme');
+        if (savedTheme === 'dark') {
+          setTheme('dark');
+          document.documentElement.classList.add('dark');
+        } else {
+          setTheme('light');
+          document.documentElement.classList.remove('dark');
+        }
+      } catch {
+        // Ignore storage errors
+      }
       const hasDemo = document.cookie.includes('verve_demo_mode=1');
       setIsDemoMode(hasDemo);
       loadLocal(null);
@@ -464,6 +479,23 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       document.cookie = `verve_demo_mode=1; path=/; max-age=604800; SameSite=Lax${secureFlag}`;
     }
     setIsDemoMode(true);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.toggle('dark', next === 'dark');
+      }
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem('verve_theme', next);
+        } catch {
+          // Ignore storage errors
+        }
+      }
+      return next;
+    });
   }, []);
 
   const signOut = useCallback(async () => {
@@ -1055,6 +1087,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         user,
         isDemoMode,
         isCloudSynced,
+        theme,
+        toggleTheme,
         deals,
         companies,
         relances,

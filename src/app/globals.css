@@ -17,6 +17,19 @@
     --primary-mint: #10B981;
   }
 
+  html.dark {
+    --canvas: #0B1017;
+    --surface-card: #121A24;
+    --border-base: #222F3E;
+    --border-hover: #32445A;
+    --text-primary: #F1F5F9;
+    --text-secondary: #94A3B8;
+    --primary: #10B981;
+    --primary-emerald: #34D399;
+    --primary-mint: #6EE7B7;
+    color-scheme: dark;
+  }
+
   html {
     background-color: var(--canvas);
     color: var(--text-primary);
@@ -27,9 +40,11 @@
 
   body {
     background-color: var(--canvas);
+    color: var(--text-primary);
     min-height: 100vh;
     font-family: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, .font-display, .font-serif {
@@ -62,6 +77,226 @@
   }
 }
 
+/* ============================================================================
+   NOBLE EMERALD DARK MODE — Architectural Surface & Typography Remapping
+   ============================================================================ */
+html.dark .bg-canvas,
+html.dark .bg-\[\#F7F8F7\] {
+  background-color: #0B1017 !important;
+}
+
+/* Kanban column trays & recessed containers */
+html.dark .bg-\[\#F1F3F2\] {
+  background-color: #0E151F !important;
+}
+
+html.dark .bg-\[\#F3FAF6\] {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+
+html.dark .bg-white,
+html.dark .bg-surface,
+html.dark .bg-surface-card,
+html.dark .focus\:bg-white:focus {
+  background-color: #121A24 !important;
+}
+
+html.dark .bg-white\/95,
+html.dark .bg-white\/90 {
+  background-color: rgba(18, 26, 36, 0.92) !important;
+}
+
+html.dark .bg-white\/60,
+html.dark .bg-white\/50 {
+  background-color: rgba(18, 26, 36, 0.65) !important;
+}
+
+html.dark .bg-\[\#F9FAFB\],
+html.dark .bg-\[\#F8FAFC\],
+html.dark .bg-\[\#F1F5F3\],
+html.dark .hover\:bg-\[\#F9FAFB\]:hover,
+html.dark .hover\:bg-\[\#F8FAFC\]:hover,
+html.dark .hover\:bg-\[\#F9FAFB\]\/60:hover,
+html.dark .hover\:bg-\[\#F9FAFB\]\/40:hover {
+  background-color: #17212E !important;
+}
+
+html.dark .bg-\[\#F3F4F6\],
+html.dark .bg-\[\#F1F5F9\],
+html.dark .bg-surface-subtle,
+html.dark .hover\:bg-\[\#F3F4F6\]:hover,
+html.dark .hover\:bg-\[\#F1F5F9\]:hover,
+html.dark .hover\:bg-white:hover {
+  background-color: #1E2B3C !important;
+}
+
+html.dark .bg-\[\#E4E7EC\],
+html.dark .bg-\[\#E5E7EB\],
+html.dark .bg-\[\#E5E9F0\],
+html.dark .bg-\[\#D1D5DB\],
+html.dark .hover\:bg-\[\#E5E7EB\]:hover {
+  background-color: #243244 !important;
+}
+
+/* Borders & Dividers */
+html.dark .border-\[\#E4E7EC\],
+html.dark .border-\[\#F3F4F6\],
+html.dark .border-\[\#E2E8F0\],
+html.dark .border-\[\#E5E7EB\],
+html.dark .border-border-base,
+html.dark .border-border-subtle,
+html.dark .border-b-\[\#E4E7EC\],
+html.dark .border-t-\[\#E4E7EC\],
+html.dark .border-t-\[\#F3F4F6\],
+html.dark .border-b-\[\#F3F4F6\] {
+  border-color: #222F3E !important;
+}
+
+html.dark .divide-\[\#E4E7EC\] > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-\[\#F3F4F6\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #222F3E !important;
+}
+
+html.dark .hover\:border-\[\#D0D5DD\]:hover,
+html.dark .border-\[\#D0D5DD\] {
+  border-color: #33455B !important;
+}
+
+html.dark .ring-white {
+  --tw-ring-color: #121A24 !important;
+}
+
+/* Typography */
+html.dark .text-\[\#111827\],
+html.dark .text-text-primary,
+html.dark .hover\:text-\[\#111827\]:hover,
+html.dark .group:hover .group-hover\:text-\[\#111827\] {
+  color: #F1F5F9 !important;
+}
+
+html.dark .text-\[\#4B5563\],
+html.dark .text-text-secondary {
+  color: #94A3B8 !important;
+}
+
+html.dark .text-\[\#6B7280\],
+html.dark .text-\[\#9CA3AF\],
+html.dark .text-text-muted {
+  color: #64748B !important;
+}
+
+/* Emerald Accents & Badges in Dark Mode */
+html.dark .text-\[\#047857\],
+html.dark .text-\[\#005d42\],
+html.dark .text-primary,
+html.dark .hover\:text-\[\#047857\]:hover,
+html.dark .hover\:text-\[\#065F46\]:hover,
+html.dark .group:hover .group-hover\:text-\[\#047857\] {
+  color: #34D399 !important;
+}
+
+html.dark .bg-\[\#ECFDF5\],
+html.dark .bg-\[\#ECFDF5\]\/60,
+html.dark .bg-\[\#D1FAE5\],
+html.dark .hover\:bg-\[\#ECFDF5\]:hover,
+html.dark .bg-primary-light {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+}
+
+html.dark .border-\[\#A7F3D0\],
+html.dark .border-\[\#A7F3D0\]\/70 {
+  border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+/* Multi-Accent Sector & Category Badges in Dark Mode */
+html.dark .bg-\[\#ECFEFF\] {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+}
+html.dark .text-\[\#0891B2\] {
+  color: #22D3EE !important;
+}
+html.dark .border-\[\#A5F3FC\] {
+  border-color: rgba(34, 211, 238, 0.3) !important;
+}
+
+html.dark .bg-\[\#EEF2FF\] {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+html.dark .text-\[\#4338CA\] {
+  color: #818CF8 !important;
+}
+html.dark .border-\[\#C7D2FE\] {
+  border-color: rgba(129, 140, 248, 0.3) !important;
+}
+
+html.dark .bg-\[\#F0FDFA\] {
+  background-color: rgba(20, 184, 166, 0.15) !important;
+}
+html.dark .text-\[\#0F766E\] {
+  color: #2DD4BF !important;
+}
+html.dark .border-\[\#99F6E4\] {
+  border-color: rgba(45, 212, 191, 0.3) !important;
+}
+
+html.dark .bg-\[\#F5F3FF\] {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+}
+html.dark .text-\[\#7C3AED\] {
+  color: #A78BFA !important;
+}
+html.dark .border-\[\#DDD6FE\] {
+  border-color: rgba(167, 139, 250, 0.3) !important;
+}
+
+html.dark .bg-\[\#FEFCE8\],
+html.dark .bg-\[\#FFFBEB\] {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+}
+
+html.dark .text-\[\#B45309\],
+html.dark .text-\[\#CA8A04\] {
+  color: #FBBF24 !important;
+}
+
+html.dark .border-\[\#FEF08A\],
+html.dark .border-\[\#FDE68A\] {
+  border-color: rgba(251, 191, 36, 0.3) !important;
+}
+
+html.dark .bg-\[\#FFF1F2\],
+html.dark .bg-\[\#FDF2F4\],
+html.dark .hover\:bg-\[\#FFF1F2\]:hover,
+html.dark .hover\:bg-\[\#FFE4E6\]:hover {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+}
+
+html.dark .text-\[\#BE123C\],
+html.dark .text-\[\#9F1239\],
+html.dark .text-\[\#E11D48\],
+html.dark .hover\:text-\[\#BE123C\]:hover,
+html.dark .hover\:text-\[\#E11D48\]:hover {
+  color: #FB7185 !important;
+}
+
+html.dark .border-\[\#FECDD3\],
+html.dark .border-\[\#FBCFE8\],
+html.dark .hover\:border-\[\#FECDD3\]:hover {
+  border-color: rgba(251, 113, 133, 0.35) !important;
+}
+
+/* Form Controls in Dark Mode */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color: #F1F5F9;
+}
+
+html.dark select option {
+  background-color: #121A24;
+  color: #F1F5F9;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -76,6 +311,14 @@
   border-radius: 4px;
 }
 
+html.dark ::-webkit-scrollbar-thumb {
+  background: #2A3A4E;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #98A2B3;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3D526D;
 }

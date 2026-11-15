@@ -14,6 +14,7 @@ import {
   Phone,
   X,
   Check,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ export default function ClientsPage() {
 
   // Edit Company Modal State
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
   const [editName, setEditName] = useState('');
   const [editSector, setEditSector] = useState('');
   const [editCity, setEditCity] = useState('');
@@ -378,7 +380,7 @@ export default function ClientsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteCompany(comp.id)}
+                        onClick={() => setDeletingCompany(comp)}
                         title={`Retirer ${comp.name}`}
                         className="w-8 h-8 rounded-lg hover:bg-[#FFF1F2] flex items-center justify-center text-[#6B7280] hover:text-[#BE123C] transition-colors cursor-pointer"
                       >
@@ -453,7 +455,7 @@ export default function ClientsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => deleteCompany(comp.id)}
+                    onClick={() => setDeletingCompany(comp)}
                     className="p-1 text-[#6B7280] hover:text-[#BE123C]"
                     title="Supprimer"
                   >
@@ -680,6 +682,67 @@ export default function ClientsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Confirm Delete Company Modal */}
+      {deletingCompany && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111827]/40 backdrop-blur-[2px]">
+          <div
+            className="fixed inset-0"
+            onClick={() => setDeletingCompany(null)}
+            aria-hidden="true"
+          />
+
+          <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-[#E4E7EC] overflow-hidden z-10 p-5 sm:p-6 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-lg bg-[#FFF1F2] border border-[#FECDD3] text-[#BE123C] flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-base font-bold text-[#111827]">
+                  Confirmer la suppression
+                </h2>
+                <p className="text-xs text-[#4B5563] mt-1 leading-relaxed">
+                  Voulez-vous vraiment retirer la société{' '}
+                  <strong className="text-[#111827] font-semibold">
+                    « {deletingCompany.name} »
+                  </strong>{' '}
+                  ({deletingCompany.primaryContact.name}) du répertoire des comptes ?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-[#F9FAFB] border border-[#E4E7EC] flex items-center justify-between text-xs">
+              <span className="text-[#6B7280]">{deletingCompany.sector} — {deletingCompany.city}</span>
+              <span className="font-display font-bold text-[#111827] tabular-nums">
+                {formatCurrency(deletingCompany.cumulativeValue)}
+              </span>
+            </div>
+
+            <div className="pt-3 grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2.5 border-t border-[#E4E7EC]">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => setDeletingCompany(null)}
+                className="w-full sm:w-auto h-10 sm:h-9 whitespace-nowrap"
+              >
+                Annuler
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteCompany(deletingCompany.id);
+                  setDeletingCompany(null);
+                }}
+                className="h-10 sm:h-9 px-4 rounded-lg bg-[#BE123C] hover:bg-[#9F1239] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto whitespace-nowrap"
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Supprimer</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

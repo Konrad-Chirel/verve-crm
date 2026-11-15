@@ -28,17 +28,21 @@ export function StageChip({ stageId, label, className, showDot = true }: StageCh
   const stage = STAGES.find((s) => s.id === stageId) || STAGES[0];
   const displayLabel = label || stage.name;
 
+  const stageStyles: Record<string, string> = {
+    lead: 'bg-[#F0FDFA] text-[#0F766E] border-[#99F6E4]',
+    discovery: 'bg-[#ECFEFF] text-[#0891B2] border-[#A5F3FC]',
+    proposal: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]',
+    negotiation: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]',
+    won: 'bg-[#D1FAE5] text-[#047857] border-[#A7F3D0]',
+  };
+
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-label-sm font-medium border transition-colors',
+        stageStyles[stage.id] || stageStyles.lead,
         className
       )}
-      style={{
-        backgroundColor: stage.chipBg,
-        color: stage.chipText,
-        borderColor: `${stage.chipText}25`,
-      }}
     >
       {showDot && (
         <span

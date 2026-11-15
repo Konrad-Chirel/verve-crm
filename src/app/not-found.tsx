@@ -1,33 +1,43 @@
 import Link from 'next/link';
-import { ArrowLeft, LayoutDashboard, Kanban } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowLeft, Compass, Kanban } from 'lucide-react';
+import { BRAND } from '@/lib/brand';
 
 export default function NotFound() {
   return (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 py-12">
-      <div className="w-14 h-14 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] flex items-center justify-center font-display font-extrabold text-xl mb-4 shadow-2xs">
-        404
-      </div>
-      <h1 className="font-display font-bold text-2xl sm:text-3xl text-[#111827] tracking-tight mb-2">
-        Page introuvable
-      </h1>
-      <p className="text-sm text-[#6B7280] max-w-md mb-8">
-        L’adresse saisie ne correspond à aucun écran actif ou le dossier recherché a été déplacé.
-      </p>
+    <div className="min-h-[75vh] flex items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full bg-white border border-[#E4E7EC] rounded-2xl p-6 sm:p-8 text-center shadow-2xs space-y-5">
+        <div className="w-12 h-12 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] flex items-center justify-center mx-auto">
+          <Compass className="w-6 h-6" />
+        </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <Link href="/dashboard">
-          <Button variant="primary" size="md">
-            <LayoutDashboard className="w-4 h-4" />
-            <span>Aller à la Synthèse</span>
-          </Button>
-        </Link>
-        <Link href="/pipeline">
-          <Button variant="secondary" size="md">
-            <Kanban className="w-4 h-4" />
-            <span>Voir le Pipeline</span>
-          </Button>
-        </Link>
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#F3F4F6] text-[#4B5563] text-[11px] font-semibold uppercase tracking-wider">
+            Erreur 404 — {BRAND.shortName}
+          </span>
+          <h1 className="font-display text-2xl font-bold text-[#111827] tracking-tight">
+            Ce dossier ou cette page est introuvable
+          </h1>
+          <p className="text-xs text-[#6B7280] leading-relaxed">
+            La ressource demandée a peut-être été archivée, déplacée dans le pipeline ou son adresse est incorrecte.
+          </p>
+        </div>
+
+        <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <Link
+            href="/dashboard"
+            className="h-9 px-4 rounded-lg bg-[#047857] hover:bg-[#065F46] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Retour à la synthèse</span>
+          </Link>
+          <Link
+            href="/pipeline"
+            className="h-9 px-4 rounded-lg bg-white hover:bg-[#F3F4F6] text-[#111827] border border-[#E4E7EC] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <Kanban className="w-3.5 h-3.5 text-[#047857]" />
+            <span>Ouvrir le pipeline</span>
+          </Link>
+        </div>
       </div>
     </div>
   );

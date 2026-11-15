@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Check, RotateCcw, LogOut, ShieldCheck } from 'lucide-react';
+import { Check, RotateCcw, LogOut, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCRM } from '@/context/crm-context';
 
 export default function ParametresPage() {
-  const { profile, updateProfile, resetDemoData, user, isCloudSynced, signOut } = useCRM();
+  const { profile, updateProfile, resetDemoData, user, isCloudSynced, signOut, theme, toggleTheme } = useCRM();
 
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState(profile.name);
@@ -150,6 +150,37 @@ export default function ParametresPage() {
             </Button>
           </div>
         </form>
+      </div>
+
+      {/* Theme Preference Section */}
+      <div className="bg-white border border-[#E4E7EC] rounded-xl shadow-2xs p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h3 className="font-display font-bold text-sm text-[#111827]">
+            Apparence &amp; Thème d’affichage
+          </h3>
+          <p className="text-xs text-[#6B7280] max-w-lg">
+            Basculez entre le thème clair (« Noble Emerald ») et le thème sombre exécutif (« Noble Emerald Dark »).
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="md"
+          onClick={toggleTheme}
+          className="w-full sm:w-auto shrink-0"
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="w-3.5 h-3.5 text-[#34D399]" />
+              <span>Passer en mode clair</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-3.5 h-3.5 text-[#4B5563]" />
+              <span>Passer en mode sombre</span>
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Demo Data Reset Section */}

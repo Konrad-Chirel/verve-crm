@@ -3,14 +3,14 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, User, Building2, Briefcase, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Building2, Briefcase, ArrowLeft, Sun, Moon } from 'lucide-react';
 import { VerveAuthBrand, VerveAuthShowcase } from '@/components/layout/auth-showcase';
 import { useCRM } from '@/context/crm-context';
 import { createClient } from '@/lib/supabase/client';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { showToast, updateProfile, enableDemoMode } = useCRM();
+  const { showToast, updateProfile, enableDemoMode, theme, toggleTheme } = useCRM();
   const supabase = createClient();
 
   const [name, setName] = useState('');
@@ -150,13 +150,29 @@ export default function RegisterPage() {
           <div className="lg:hidden">
             <VerveAuthBrand />
           </div>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Retour à la connexion</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+              aria-label="Basculer le thème"
+              className="w-8 h-8 rounded-lg bg-white border border-[#E4E7EC] hover:border-[#047857] flex items-center justify-center text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer shadow-2xs"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-3.5 h-3.5 text-[#34D399]" />
+              ) : (
+                <Moon className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Retour à la connexion</span>
+            </Link>
+          </div>
         </div>
 
         <div className="flex-1 flex items-center justify-center px-5 sm:px-8 pb-12">

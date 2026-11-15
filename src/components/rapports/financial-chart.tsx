@@ -475,7 +475,7 @@ export function FinancialChart({
                         cx={pWeighted.x}
                         cy={pWeighted.y}
                         r={isHovered || isSelected ? 5 : 3.5}
-                        fill="#FFFFFF"
+                        fill="var(--surface-card)"
                         stroke="#10B981"
                         strokeWidth="2"
                         className="transition-all duration-200"
@@ -489,7 +489,7 @@ export function FinancialChart({
                         cy={pSigned.y}
                         r={isHovered || isSelected ? 6 : 4.5}
                         fill="#047857"
-                        stroke="#FFFFFF"
+                        stroke="var(--surface-card)"
                         strokeWidth="2"
                         className="transition-all duration-200"
                       />

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, Play } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Play, Sun, Moon } from 'lucide-react';
 import { VerveAuthBrand, VerveAuthShowcase } from '@/components/layout/auth-showcase';
 import { useCRM } from '@/context/crm-context';
 import { createClient } from '@/lib/supabase/client';
@@ -19,7 +19,7 @@ export default function LoginPage() {
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { showToast, enableDemoMode } = useCRM();
+  const { showToast, enableDemoMode, theme, toggleTheme } = useCRM();
   const supabase = createClient();
 
   const [email, setEmail] = useState('');
@@ -136,14 +136,30 @@ function LoginPageContent() {
             Espace Associés &amp; Directeurs de clientèle
           </div>
 
-          <button
-            type="button"
-            onClick={handleEnterDemo}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#E4E7EC] hover:border-[#047857] text-xs font-semibold text-[#047857] transition-colors cursor-pointer shadow-2xs"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Accès démo direct</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+              aria-label="Basculer le thème"
+              className="w-8 h-8 rounded-lg bg-white border border-[#E4E7EC] hover:border-[#047857] flex items-center justify-center text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer shadow-2xs"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-3.5 h-3.5 text-[#34D399]" />
+              ) : (
+                <Moon className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleEnterDemo}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#E4E7EC] hover:border-[#047857] text-xs font-semibold text-[#047857] transition-colors cursor-pointer shadow-2xs"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Accès démo direct</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 flex items-center justify-center px-5 sm:px-8 pb-12">
