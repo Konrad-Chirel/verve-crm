@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Download, ArrowUpRight, Filter } from 'lucide-react';
+import { Download, ArrowUpRight, FileText } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { Button } from '@/components/ui/button';
 import { useCRM } from '@/context/crm-context';
 import { formatCurrency } from '@/lib/utils';
@@ -114,6 +115,133 @@ export default function RapportsPage() {
     showToast('Rapport financier CSV exporté');
   };
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const periodLabel =
+      period === 'q1' ? 'Trimestre 1 2026' : period === 's1' ? 'Semestre 1 2026' : 'Exercice 2026';
+
+    // Top Noble Emerald Banner
+    doc.setFillColor(4, 120, 87);
+    doc.rect(0, 0, pageW, 28, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`${profile.agency.toUpperCase()} — RAPPORT FINANCIER EXÉCUTIF`, 16, 13);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(209, 250, 229);
+    doc.text(
+      `Période : ${periodLabel}  |  Associé : ${profile.name} (${profile.role})  |  Édité le ${new Date().toLocaleDateString('fr-FR')}`,
+      16,
+      21
+    );
+
+    // KPI Summary Boxes
+    doc.setDrawColor(228, 231, 236);
+    doc.setFillColor(249, 250, 251);
+    doc.roundedRect(16, 36, pageW - 32, 26, 2, 2, 'FD');
+
+    const fmtEur = (n: number) => `${n.toLocaleString('fr-FR').replace(/\s/g, ' ')} € HT`;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(107, 114, 128);
+    doc.text('HONORAIRES SIGNÉS CUMULÉS', 22, 44);
+    doc.text('HONORAIRES MOYENS / MANDAT', 85, 44);
+    doc.text('RÉALISATION DE LA CIBLE', 148, 44);
+
+    doc.setFontSize(13);
+    doc.setTextColor(17, 24, 39);
+    doc.text(fmtEur(signedDisplay), 22, 54);
+    doc.text(fmtEur(avgDealSize), 85, 54);
+    doc.setTextColor(4, 120, 87);
+    doc.text(`${targetPct}% (${fmtEur(targetDisplay)})`, 148, 54);
+
+    // Section 1: Monthly Evolution
+    let y = 74;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text('1. Évolution mensuelle de la facturation et du pondéré', 16, y);
+
+    y += 6;
+    doc.setFillColor(243, 244, 246);
+    doc.rect(16, y, pageW - 32, 8, 'F');
+    doc.setFontSize(8.5);
+    doc.setTextColor(75, 85, 99);
+    doc.text('Mois', 20, y + 5.5);
+    doc.text('Honoraires signés HT', 68, y + 5.5);
+    doc.text('Encours pondéré HT', 118, y + 5.5);
+    doc.text('Mandats', 162, y + 5.5);
+    doc.text('Var.', 182, y + 5.5);
+
+    y += 8;
+    doc.setFont('helvetica', 'normal');
+    MONTHLY_DATA.forEach((m) => {
+      doc.setTextColor(17, 24, 39);
+      doc.text(m.label, 20, y + 5.5);
+      doc.text(fmtEur(m.signed), 68, y + 5.5);
+      doc.text(fmtEur(m.weighted), 118, y + 5.5);
+      doc.text(String(m.dealsCount), 165, y + 5.5);
+      doc.setTextColor(4, 120, 87);
+      doc.text(m.growth, 182, y + 5.5);
+      doc.setDrawColor(243, 244, 246);
+      doc.line(16, y + 8, pageW - 16, y + 8);
+      y += 8;
+    });
+
+    // Section 2: Top Weighted Deals
+    y += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text('2. Principaux mandats du portefeuille actif', 16, y);
+
+    y += 6;
+    doc.setFillColor(243, 244, 246);
+    doc.rect(16, y, pageW - 32, 8, 'F');
+    doc.setFontSize(8.5);
+    doc.setTextColor(75, 85, 99);
+    doc.text('Société', 20, y + 5.5);
+    doc.text('Mission', 62, y + 5.5);
+    doc.text('Étape', 122, y + 5.5);
+    doc.text('Montant HT', 150, y + 5.5);
+    doc.text('Pondéré', 176, y + 5.5);
+
+    y += 8;
+    doc.setFont('helvetica', 'normal');
+    sortedDeals.slice(0, 10).forEach((d) => {
+      const stgName = STAGES.find((s) => s.id === d.stageId)?.shortName || d.stageId;
+      const weighted = Math.round((d.amount * d.probability) / 100);
+      doc.setTextColor(17, 24, 39);
+      doc.text(d.companyName.slice(0, 22), 20, y + 5.5);
+      doc.text(d.title.slice(0, 32), 62, y + 5.5);
+      doc.text(stgName, 122, y + 5.5);
+      doc.text(`${d.amount.toLocaleString('fr-FR').replace(/\s/g, ' ')} €`, 150, y + 5.5);
+      doc.setTextColor(4, 120, 87);
+      doc.text(`${weighted.toLocaleString('fr-FR').replace(/\s/g, ' ')} €`, 176, y + 5.5);
+      doc.setDrawColor(243, 244, 246);
+      doc.line(16, y + 8, pageW - 16, y + 8);
+      y += 8;
+    });
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(156, 163, 175);
+    doc.text(
+      `Document généré par Verve CRM — ${profile.agency} — Confidentiel`,
+      pageW / 2,
+      286,
+      { align: 'center' }
+    );
+
+    doc.save(`rapport-executif-verve-${period}-${new Date().toISOString().slice(0, 10)}.pdf`);
+    showToast('Rapport exécutif PDF téléchargé');
+  };
+
   // Filter or highlight top deals according to selection
   const sortedDeals = [...deals].sort(
     (a, b) => b.amount * b.probability - a.amount * a.probability
@@ -181,9 +309,14 @@ export default function RapportsPage() {
             </button>
           </div>
 
-          <Button variant="primary" size="md" onClick={handleExportReport} className="w-full sm:w-auto">
-            <Download className="w-4 h-4" />
-            <span>Exporter le rapport CSV</span>
+          <Button variant="secondary" size="md" onClick={handleExportReport} className="w-full sm:w-auto">
+            <Download className="w-4 h-4 text-[#4B5563]" />
+            <span>Exporter CSV</span>
+          </Button>
+
+          <Button variant="primary" size="md" onClick={handleExportPDF} className="w-full sm:w-auto">
+            <FileText className="w-4 h-4" />
+            <span>Rapport exécutif PDF</span>
           </Button>
         </div>
       </div>

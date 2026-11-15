@@ -84,6 +84,21 @@ interface CRMContextType {
     paymentTerms: string;
     status: Company['status'];
   }) => Company;
+  updateCompany: (
+    id: string,
+    patch: {
+      name: string;
+      sector: string;
+      city: string;
+      contactName: string;
+      contactRole: string;
+      contactEmail: string;
+      contactPhone: string;
+      cumulativeValue: number;
+      paymentTerms: string;
+      status: Company['status'];
+    }
+  ) => void;
   deleteCompany: (id: string) => void;
   toggleRelance: (id: string) => void;
   postponeRelance: (id: string, nextTimeSlot: string) => void;
@@ -874,6 +889,68 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     return newCompany;
   };
 
+  const updateCompany: CRMContextType['updateCompany'] = (id, patch) => {
+    const existing = companies.find((c) => c.id === id);
+    const oldName = existing?.name;
+    const nextInitials = getInitials(patch.name);
+
+    setCompanies((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        const nextComp: Company = {
+          ...c,
+          name: patch.name,
+          sector: patch.sector,
+          city: patch.city,
+          initials: nextInitials,
+          primaryContact: {
+            ...c.primaryContact,
+            name: patch.contactName,
+            role: patch.contactRole,
+            email: patch.contactEmail,
+            phone: patch.contactPhone,
+            initials: getInitials(patch.contactName),
+          },
+          cumulativeValue: patch.cumulativeValue,
+          paymentTerms: patch.paymentTerms,
+          status: patch.status,
+        };
+        if (supabase && user) {
+          supabase.from('verve_companies').upsert(mapCompanyToRow(nextComp, user.id)).then(() => {});
+        }
+        return nextComp;
+      })
+    );
+
+    // Keep linked deals synchronized with updated company & contact info
+    setDeals((prev) =>
+      prev.map((d, idx) => {
+        const isLinked =
+          d.companyId === id ||
+          d.id === existing?.primaryDealId ||
+          (oldName && d.companyName.toLowerCase() === oldName.toLowerCase());
+        if (!isLinked) return d;
+        const nextDeal: Deal = {
+          ...d,
+          companyName: patch.name,
+          companySector: patch.sector,
+          companyCity: patch.city,
+          companyInitials: nextInitials,
+          contactName: patch.contactName,
+          contactRole: patch.contactRole,
+          contactEmail: patch.contactEmail,
+          contactPhone: patch.contactPhone,
+        };
+        if (supabase && user) {
+          supabase.from('verve_deals').upsert(mapDealToRow(nextDeal, user.id, idx)).then(() => {});
+        }
+        return nextDeal;
+      })
+    );
+
+    showToast(`Fiche société « ${patch.name} » mise à jour`);
+  };
+
   const deleteCompany: CRMContextType['deleteCompany'] = (id) => {
     const target = companies.find((c) => c.id === id);
     setCompanies((prev) => prev.filter((c) => c.id !== id));
@@ -995,6 +1072,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         moveDealPriority,
         deleteDeal,
         addCompany,
+        updateCompany,
         deleteCompany,
         toggleRelance,
         postponeRelance,

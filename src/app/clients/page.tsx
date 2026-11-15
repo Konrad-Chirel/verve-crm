@@ -9,32 +9,85 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  Edit3,
+  Mail,
+  Phone,
+  X,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { formatCurrency } from '@/lib/utils';
 import { useModal } from '@/context/modal-context';
 import { useCRM } from '@/context/crm-context';
+import type { Company } from '@/lib/mock-data';
 
 const ITEMS_PER_PAGE = 5;
 
 export default function ClientsPage() {
   const { openNewCompany } = useModal();
-  const { companies, deleteCompany, profile, showToast } = useCRM();
+  const { companies, updateCompany, deleteCompany, profile, showToast } = useCRM();
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'clients' | 'prospects' | 'partners'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Edit Company Modal State
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editSector, setEditSector] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editContactName, setEditContactName] = useState('');
+  const [editContactRole, setEditContactRole] = useState('');
+  const [editContactEmail, setEditContactEmail] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
+  const [editCumulativeValue, setEditCumulativeValue] = useState('0');
+  const [editPaymentTerms, setEditPaymentTerms] = useState('Échéance 30j');
+  const [editStatus, setEditStatus] = useState<Company['status']>('Offre en cours');
+
+  const openEditModal = (comp: Company) => {
+    setEditingCompany(comp);
+    setEditName(comp.name);
+    setEditSector(comp.sector);
+    setEditCity(comp.city);
+    setEditContactName(comp.primaryContact.name);
+    setEditContactRole(comp.primaryContact.role);
+    setEditContactEmail(comp.primaryContact.email || '');
+    setEditContactPhone(comp.primaryContact.phone || '');
+    setEditCumulativeValue(String(comp.cumulativeValue || 0));
+    setEditPaymentTerms(comp.paymentTerms || 'Échéance 30j');
+    setEditStatus(comp.status);
+  };
+
+  const handleSaveCompanyEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCompany || !editName.trim()) return;
+
+    updateCompany(editingCompany.id, {
+      name: editName.trim(),
+      sector: editSector.trim() || 'Conseil B2B',
+      city: editCity.trim() || 'Paris',
+      contactName: editContactName.trim() || 'Direction Générale',
+      contactRole: editContactRole.trim() || 'Décideur',
+      contactEmail: editContactEmail.trim(),
+      contactPhone: editContactPhone.trim(),
+      cumulativeValue: Math.max(0, Number(editCumulativeValue) || 0),
+      paymentTerms: editPaymentTerms.trim() || 'Échéance 30j',
+      status: editStatus,
+    });
+    setEditingCompany(null);
+  };
+
   const countAll = companies.length;
   const countClients = companies.filter((c) => c.status.includes('Client')).length;
-  const countProspects = companies.filter((c) => c.status === 'Offre en cours').length;
+  const countProspects = companies.filter((c) => c.status === 'Offre en cours' || c.status === 'Négociation').length;
   const countPartners = companies.filter((c) => c.status === 'Découverte').length;
 
   const totalVolume = companies.reduce((sum, c) => sum + c.cumulativeValue, 0);
 
   const filteredCompanies = companies.filter((comp) => {
     if (activeFilter === 'clients' && !comp.status.includes('Client')) return false;
-    if (activeFilter === 'prospects' && comp.status !== 'Offre en cours') return false;
+    if (activeFilter === 'prospects' && comp.status !== 'Offre en cours' && comp.status !== 'Négociation') return false;
     if (activeFilter === 'partners' && comp.status !== 'Découverte') return false;
 
     if (searchQuery.trim()) {
@@ -43,7 +96,8 @@ export default function ClientsPage() {
         comp.name.toLowerCase().includes(q) ||
         comp.sector.toLowerCase().includes(q) ||
         comp.city.toLowerCase().includes(q) ||
-        comp.primaryContact.name.toLowerCase().includes(q)
+        comp.primaryContact.name.toLowerCase().includes(q) ||
+        (comp.primaryContact.email || '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -66,6 +120,8 @@ export default function ClientsPage() {
       'Ville',
       'Interlocuteur',
       'Fonction',
+      'Email',
+      'Telephone',
       'Mandat Principal',
       'Volume Cumule EUR HT',
       'Modalites',
@@ -77,6 +133,8 @@ export default function ClientsPage() {
       `"${c.city.replace(/"/g, '""')}"`,
       `"${c.primaryContact.name.replace(/"/g, '""')}"`,
       `"${c.primaryContact.role.replace(/"/g, '""')}"`,
+      `"${(c.primaryContact.email || '').replace(/"/g, '""')}"`,
+      `"${(c.primaryContact.phone || '').replace(/"/g, '""')}"`,
       `"${c.activeDealsDescription.replace(/"/g, '""')}"`,
       c.cumulativeValue,
       `"${c.paymentTerms.replace(/"/g, '""')}"`,
@@ -248,6 +306,27 @@ export default function ClientsPage() {
                     <div className="text-xs text-[#6B7280] mt-0.5">
                       {comp.primaryContact.role}
                     </div>
+                    <div className="flex items-center gap-2.5 mt-1 text-[11px] text-[#047857]">
+                      {comp.primaryContact.email && (
+                        <a
+                          href={`mailto:${comp.primaryContact.email}`}
+                          className="inline-flex items-center gap-1 hover:underline"
+                          title={comp.primaryContact.email}
+                        >
+                          <Mail className="w-3 h-3" />
+                          <span className="truncate max-w-[140px]">{comp.primaryContact.email}</span>
+                        </a>
+                      )}
+                      {comp.primaryContact.phone && (
+                        <a
+                          href={`tel:${comp.primaryContact.phone}`}
+                          className="inline-flex items-center gap-1 text-[#6B7280] hover:text-[#111827]"
+                          title={comp.primaryContact.phone}
+                        >
+                          <Phone className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
                   </td>
 
                   <td className="px-6 py-4">
@@ -271,7 +350,7 @@ export default function ClientsPage() {
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
-                        comp.status === 'Offre en cours'
+                        comp.status === 'Offre en cours' || comp.status === 'Négociation'
                           ? 'bg-[#FFFBEB] text-[#B45309]'
                           : comp.status === 'Client Récurrent' || comp.status === 'Client Actif'
                           ? 'bg-[#ECFDF5] text-[#047857]'
@@ -289,6 +368,14 @@ export default function ClientsPage() {
                           Dossier
                         </Button>
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(comp)}
+                        title={`Modifier ${comp.name}`}
+                        className="w-8 h-8 rounded-lg hover:bg-[#F3F4F6] flex items-center justify-center text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => deleteCompany(comp.id)}
@@ -325,7 +412,7 @@ export default function ClientsPage() {
                 </div>
                 <span
                   className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-                    comp.status === 'Offre en cours'
+                    comp.status === 'Offre en cours' || comp.status === 'Négociation'
                       ? 'bg-[#FFFBEB] text-[#B45309]'
                       : comp.status === 'Client Récurrent' || comp.status === 'Client Actif'
                       ? 'bg-[#ECFDF5] text-[#047857]'
@@ -346,7 +433,7 @@ export default function ClientsPage() {
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-[#F3F4F6]">
-                <span className="text-xs text-[#6B7280] truncate max-w-[65%]">
+                <span className="text-xs text-[#6B7280] truncate max-w-[55%]">
                   {comp.activeDealsDescription}
                 </span>
                 <div className="flex items-center gap-2">
@@ -358,8 +445,17 @@ export default function ClientsPage() {
                   </Link>
                   <button
                     type="button"
+                    onClick={() => openEditModal(comp)}
+                    className="p-1 text-[#6B7280] hover:text-[#111827]"
+                    title="Modifier"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => deleteCompany(comp.id)}
                     className="p-1 text-[#6B7280] hover:text-[#BE123C]"
+                    title="Supprimer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -419,6 +515,174 @@ export default function ClientsPage() {
           </div>
         </div>
       </div>
+
+      {/* 4. Edit Company Modal */}
+      {editingCompany && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#111827]/40 backdrop-blur-[2px]">
+          <div className="fixed inset-0" onClick={() => setEditingCompany(null)} aria-hidden="true" />
+
+          <div className="relative w-full max-w-lg bg-white sm:rounded-xl rounded-t-2xl shadow-xl border border-[#E4E7EC] overflow-hidden z-10 max-h-[92vh] flex flex-col">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between border-b border-[#E4E7EC] bg-[#F9FAFB]">
+              <div>
+                <h2 className="font-display text-base font-bold text-[#111827]">
+                  Modifier la fiche société
+                </h2>
+                <p className="text-xs text-[#6B7280] mt-0.5">
+                  Mise à jour synchronisée avec les dossiers rattachés
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditingCompany(null)}
+                className="w-7 h-7 rounded-lg hover:bg-white flex items-center justify-center text-[#6B7280] hover:text-[#111827] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCompanyEdit} className="p-4 sm:p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Raison sociale
+                  </label>
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Secteur d’activité
+                  </label>
+                  <Input
+                    value={editSector}
+                    onChange={(e) => setEditSector(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Ville / Siège
+                  </label>
+                  <Input
+                    value={editCity}
+                    onChange={(e) => setEditCity(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#E4E7EC] grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Interlocuteur principal
+                  </label>
+                  <Input
+                    value={editContactName}
+                    onChange={(e) => setEditContactName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Fonction
+                  </label>
+                  <Input
+                    value={editContactRole}
+                    onChange={(e) => setEditContactRole(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Email professionnel
+                  </label>
+                  <Input
+                    type="email"
+                    value={editContactEmail}
+                    onChange={(e) => setEditContactEmail(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Téléphone direct
+                  </label>
+                  <Input
+                    value={editContactPhone}
+                    onChange={(e) => setEditContactPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-[#E4E7EC] grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Volume cumulé (€ HT)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={editCumulativeValue}
+                    onChange={(e) => setEditCumulativeValue(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Statut relationnel
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as Company['status'])}
+                    className="w-full h-9 bg-white text-[#111827] text-xs font-medium rounded-lg border border-[#E4E7EC] px-2.5 focus:border-[#047857] outline-none"
+                  >
+                    <option value="Découverte">Découverte</option>
+                    <option value="Offre en cours">Offre en cours</option>
+                    <option value="Négociation">Négociation</option>
+                    <option value="Client Actif">Client Actif</option>
+                    <option value="Client Récurrent">Client Récurrent</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#111827] mb-1">
+                    Conditions
+                  </label>
+                  <Input
+                    value={editPaymentTerms}
+                    onChange={(e) => setEditPaymentTerms(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 border-t border-[#E4E7EC]">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setEditingCompany(null)}
+                  className="w-full sm:w-auto"
+                >
+                  Annuler
+                </Button>
+                <Button type="submit" variant="primary" size="md" className="w-full sm:w-auto">
+                  <Check className="w-4 h-4" />
+                  <span>Enregistrer</span>
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
