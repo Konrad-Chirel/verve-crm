@@ -23,6 +23,7 @@ export interface UserProfile {
   role: string;
   agency: string;
   email: string;
+  avatarUrl?: string;
   monthlyTarget: number;
   quarterlyTarget: number;
 }
@@ -418,6 +419,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       const metaAgency = authUser.user_metadata?.agency_name || INITIAL_PROFILE.agency;
       const metaRole = authUser.user_metadata?.role || INITIAL_PROFILE.role;
       const metaEmail = authUser.email || INITIAL_PROFILE.email;
+      const metaAvatar: string | undefined =
+        authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || undefined;
 
       setProfile((prev) => ({
         ...prev,
@@ -425,6 +428,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         agency: metaAgency,
         role: metaRole,
         email: metaEmail,
+        avatarUrl: metaAvatar,
       }));
 
       try {
@@ -460,6 +464,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
               role: profRes.data.role || metaRole,
               agency: profRes.data.agency || metaAgency,
               email: profRes.data.email || metaEmail,
+              avatarUrl: metaAvatar,
               monthlyTarget: Number(profRes.data.monthly_target) || 50000,
               quarterlyTarget: Number(profRes.data.quarterly_target) || 160000,
             });

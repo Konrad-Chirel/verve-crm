@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -18,24 +20,41 @@ export function Avatar({
   online,
   ...props
 }: AvatarProps) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [src]);
+
   const sizes = {
-    sm: 'w-6 h-6 text-[11px]',
+    sm: 'w-7 h-7 text-[11px]',
     md: 'w-8 h-8 text-label-md',
     lg: 'w-11 h-11 text-label-lg',
     xl: 'w-12 h-12 text-headline-sm',
   };
 
+  const showImg = Boolean(src) && !imgFailed;
+
   return (
     <div className={cn('relative inline-flex shrink-0 select-none', className)} {...props}>
       <div
         className={cn(
-          'rounded-md flex items-center justify-center font-semibold overflow-hidden bg-surface-subtle text-text-primary border border-border-base',
+          'rounded-md flex items-center justify-center font-semibold overflow-hidden border',
+          showImg
+            ? 'bg-surface-subtle text-text-primary border-border-base'
+            : 'bg-[#047857] text-white border-[#065F46]',
           sizes[size]
         )}
       >
-        {src ? (
+        {showImg ? (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={src} alt={alt} className="w-full h-full object-cover" />
+          <img
+            src={src}
+            alt={alt}
+            referrerPolicy="no-referrer"
+            onError={() => setImgFailed(true)}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <span>{initials || 'U'}</span>
         )}

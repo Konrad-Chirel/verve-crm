@@ -192,8 +192,17 @@ export function Sidebar() {
           <div className="flex items-center gap-2.5 min-w-0">
             <Avatar
               size="sm"
-              src={BRAND.user.avatar}
-              initials={BRAND.user.initials}
+              src={profile.avatarUrl}
+              alt={profile.name}
+              initials={
+                profile.name
+                  .trim()
+                  .split(/\s+/)
+                  .map((p) => p[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase() || 'VC'
+              }
             />
             <div className="hidden xl:block min-w-0">
               <div className="font-semibold text-[13px] text-[#111827] truncate leading-tight">

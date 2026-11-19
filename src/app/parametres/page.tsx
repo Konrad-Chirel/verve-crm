@@ -92,9 +92,19 @@ export default function ParametresPage() {
       <div className="bg-white border border-[#E4E7EC] rounded-xl shadow-2xs p-4 sm:p-6">
         <form onSubmit={handleSave} className="space-y-6">
           <div className="flex items-center gap-3.5 pb-5 border-b border-[#E4E7EC]">
-            <div className="w-12 h-12 rounded-lg bg-[#047857] text-white flex items-center justify-center font-display font-bold text-base">
-              {computedInitials}
-            </div>
+            {profile.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={profile.avatarUrl}
+                alt={name}
+                referrerPolicy="no-referrer"
+                className="w-12 h-12 rounded-lg object-cover border border-[#E4E7EC] shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-[#047857] text-white flex items-center justify-center font-display font-bold text-base shrink-0">
+                {computedInitials}
+              </div>
+            )}
             <div>
               <h2 className="font-display font-bold text-base text-[#111827]">{name}</h2>
               <p className="text-xs text-[#6B7280]">
