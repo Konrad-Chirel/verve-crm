@@ -30,16 +30,24 @@ export default function LoginPage() {
 
 type Mode = 'login' | 'reset';
 
-function getSafeRedirect(raw: string | null): string {
-  const value = raw || '/dashboard';
-  const safe =
-    value.startsWith('/') &&
-    !value.startsWith('//') &&
-    !value.startsWith('/\\') &&
-    !value.includes('@') &&
-    !value.includes('\\') &&
-    !value.includes(':');
-  return safe ? value : '/dashboard';
+function getSafeRedirect(raw: string | null, fallback = '/dashboard'): string {
+  if (!raw) return fallback;
+  const trimmed = raw.trim();
+  if (
+    !trimmed.startsWith('/') ||
+    trimmed.startsWith('//') ||
+    trimmed.includes('\\') ||
+    /[\x00-\x1f\x7f]/.test(trimmed)
+  ) {
+    return fallback;
+  }
+  try {
+    const parsed = new URL(trimmed, 'https://verve.invalid');
+    if (parsed.origin !== 'https://verve.invalid') return fallback;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
 }
 
 function LoginPageContent() {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 import {
   MOCK_DEALS,
@@ -16,6 +16,7 @@ import {
 } from '@/lib/mock-data';
 import { BRAND } from '@/lib/brand';
 import { createClient } from '@/lib/supabase/client';
+import { isSafeStoragePath, sanitizeSafeId } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 
 export interface UserProfile {
@@ -370,6 +371,16 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<CRMNotification[]>(INITIAL_NOTIFICATIONS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const isSigningOutRef = useRef(false);
+
+  const resetMemoryState = useCallback(() => {
+    setDeals(MOCK_DEALS);
+    setCompanies(MOCK_COMPANIES);
+    setRelances(MOCK_RELANCES);
+    setActivities(MOCK_ACTIVITIES);
+    setProfile(INITIAL_PROFILE);
+    setNotifications(INITIAL_NOTIFICATIONS);
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -392,9 +403,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
     const loadLocal = (uid?: string | null) => {
       try {
-        const raw =
-          window.localStorage.getItem(storageKeyForUser(uid)) ||
-          window.localStorage.getItem(STORAGE_KEY);
+        // Strict tenant isolation: authenticated users NEVER read the unscoped demo cache
+        const key = storageKeyForUser(uid);
+        const raw = window.localStorage.getItem(key);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed.deals) && parsed.deals.length > 0) setDeals(parsed.deals);
@@ -484,6 +495,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
             setDeals(dealsRes.data.map(mapRowToDeal));
           } else {
             // Seed initial portfolio deals for a newly created account
+            setDeals(MOCK_DEALS);
             await supabase
               .from('verve_deals')
               .upsert(MOCK_DEALS.map((d, idx) => mapDealToRow(d, authUser.id, idx)));
@@ -492,6 +504,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
           if (Array.isArray(compRes.data) && compRes.data.length > 0) {
             setCompanies(compRes.data.map(mapRowToCompany));
           } else {
+            setCompanies(MOCK_COMPANIES);
             await supabase
               .from('verve_companies')
               .upsert(MOCK_COMPANIES.map((c) => mapCompanyToRow(c, authUser.id)));
@@ -501,6 +514,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
             if (Array.isArray(relRes.data) && relRes.data.length > 0) {
               setRelances(relRes.data.map(mapRowToRelance));
             } else {
+              setRelances(MOCK_RELANCES);
               await supabase
                 .from('verve_relances')
                 .upsert(MOCK_RELANCES.map((r) => mapRelanceToRow(r, authUser.id)));
@@ -511,6 +525,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
             if (Array.isArray(actRes.data) && actRes.data.length > 0) {
               setActivities(actRes.data.map(mapRowToActivity));
             } else {
+              setActivities(MOCK_ACTIVITIES);
               await supabase
                 .from('verve_activities')
                 .upsert(MOCK_ACTIVITIES.map((a) => mapActivityToRow(a, authUser.id)));
@@ -537,18 +552,21 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       }
       const hasDemo = document.cookie.includes('verve_demo_mode=1');
       setIsDemoMode(hasDemo);
-      loadLocal(null);
 
+      let authenticatedUser: User | null = null;
       if (supabase) {
         const { data } = await supabase.auth.getSession();
-        const sessionUser = data.session?.user ?? null;
-        if (mounted) {
-          setUser(sessionUser);
-          if (sessionUser) {
-            setIsDemoMode(false);
-            loadLocal(sessionUser.id);
-            await loadFromSupabase(sessionUser);
-          }
+        authenticatedUser = data.session?.user ?? null;
+      }
+
+      if (mounted) {
+        setUser(authenticatedUser);
+        if (authenticatedUser) {
+          setIsDemoMode(false);
+          loadLocal(authenticatedUser.id);
+          await loadFromSupabase(authenticatedUser);
+        } else {
+          loadLocal(null);
         }
       }
       if (mounted) setHydrated(true);
@@ -559,13 +577,17 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return;
     const { data: sub } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       const nextUser = session?.user ?? null;
-      setUser(nextUser);
       if (nextUser) {
+        isSigningOutRef.current = false;
+        setUser(nextUser);
         setIsDemoMode(false);
+        resetMemoryState();
         loadLocal(nextUser.id);
         loadFromSupabase(nextUser);
       } else {
+        setUser(null);
         setIsCloudSynced(false);
+        resetMemoryState();
       }
     });
 
@@ -573,11 +595,11 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       sub.subscription.unsubscribe();
     };
-  }, [supabase, storageKeyForUser]);
+  }, [supabase, storageKeyForUser, resetMemoryState]);
 
-  // Persist to localStorage on state changes
+  // Persist to localStorage on state changes (never persist during sign-out or outside active session/demo)
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || isSigningOutRef.current || (!user && !isDemoMode)) return;
     try {
       window.localStorage.setItem(
         storageKeyForUser(user?.id),
@@ -593,7 +615,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore storage quota errors
     }
-  }, [deals, companies, relances, activities, profile, notifications, hydrated, user?.id, storageKeyForUser]);
+  }, [deals, companies, relances, activities, profile, notifications, hydrated, user, isDemoMode, storageKeyForUser]);
 
   const enableDemoMode = useCallback(() => {
     if (typeof document !== 'undefined') {
@@ -624,6 +646,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    isSigningOutRef.current = true;
+    resetMemoryState();
     if (typeof document !== 'undefined') {
       const secureFlag =
         typeof window !== 'undefined' && window.location.protocol === 'https:'
@@ -631,6 +655,20 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
           : '';
       document.cookie = `verve_demo_mode=; path=/; max-age=0; SameSite=Lax${secureFlag}`;
     }
+    setIsDemoMode(false);
+    setIsCloudSynced(false);
+    if (supabase) {
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+        }
+      } catch {
+        // Fallback to local sign-out if offline so session cookies are always cleared
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
+    }
+    setUser(null);
     if (typeof window !== 'undefined') {
       try {
         localStorage.removeItem(STORAGE_KEY);
@@ -646,17 +684,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // Ignore storage errors
       }
-    }
-    setIsDemoMode(false);
-    setIsCloudSynced(false);
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
-    setUser(null);
-    if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
-  }, [supabase, user?.id, storageKeyForUser]);
+  }, [supabase, user?.id, storageKeyForUser, resetMemoryState]);
 
   const pushActivity = (act: Activity) => {
     setActivities((prev) => [act, ...prev]);
@@ -985,6 +1015,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     setDeals((prev) => prev.filter((d) => d.id !== id));
     if (supabase && user) {
       supabase.from('verve_deals').delete().eq('user_id', user.id).eq('id', id).then(() => {});
+      if (target?.documentPath && isSafeStoragePath(target.documentPath, user.id)) {
+        supabase.storage.from('verve-documents').remove([target.documentPath]).then(() => {});
+      }
     }
     if (target) {
       showToast(`Dossier « ${target.title} » archivé`);
@@ -1272,13 +1305,6 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const isSafeHttpsUrl = (url: unknown): url is string =>
     typeof url === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(url.trim());
 
-  const isSafeStoragePath = (path: unknown, uid?: string | null): path is string =>
-    typeof path === 'string' &&
-    Boolean(uid) &&
-    path.startsWith(`${uid}/`) &&
-    !path.includes('..') &&
-    !path.includes('\\');
-
   const clampNum = (v: unknown, fallback: number, min = 0, max = 100_000_000) => {
     const n = Number(v);
     return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
@@ -1307,9 +1333,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
       const nextDeals: Deal[] = Array.isArray(parsed.deals)
         ? parsed.deals.slice(0, MAX_RECORDS).filter((d: any) => d && typeof d === 'object' && typeof d.title === 'string').map((d: any, i: number): Deal => ({
-            id: typeof d.id === 'string' && d.id.trim() ? d.id.slice(0, 80) : `deal-imp-${Date.now()}-${i}`,
+            id: sanitizeSafeId(d.id, `deal-imp-${i}`),
             title: String(d.title).slice(0, 160),
-            companyId: typeof d.companyId === 'string' ? d.companyId.slice(0, 80) : '',
+            companyId: typeof d.companyId === 'string' ? sanitizeSafeId(d.companyId, `comp-${i}`) : '',
             companyName: typeof d.companyName === 'string' ? d.companyName.slice(0, 120) : 'Société',
             companyCity: typeof d.companyCity === 'string' ? d.companyCity.slice(0, 80) : 'Paris',
             companySector: typeof d.companySector === 'string' ? d.companySector.slice(0, 80) : 'Conseil & Tech B2B',

@@ -6,7 +6,7 @@ import { Download, ArrowUpRight, FileText } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { Button } from '@/components/ui/button';
 import { useCRM } from '@/context/crm-context';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, sanitizeCsvCell } from '@/lib/utils';
 import { STAGES } from '@/lib/mock-data';
 import { FinancialChart, type MonthlyDataPoint } from '@/components/rapports/financial-chart';
 
@@ -92,13 +92,13 @@ export default function RapportsPage() {
       const stgName = STAGES.find((s) => s.id === d.stageId)?.name || d.stageId;
       const weighted = Math.round((d.amount * d.probability) / 100);
       return [
-        `"${d.title.replace(/"/g, '""')}"`,
-        `"${d.companyName.replace(/"/g, '""')}"`,
-        `"${stgName}"`,
-        d.amount,
-        d.probability,
+        sanitizeCsvCell(d.title),
+        sanitizeCsvCell(d.companyName),
+        sanitizeCsvCell(stgName),
+        Number.isFinite(Number(d.amount)) ? Number(d.amount) : 0,
+        Number.isFinite(Number(d.probability)) ? Number(d.probability) : 0,
         weighted,
-        `"${d.nextActionDate || 'Mars 2026'}"`,
+        sanitizeCsvCell(d.nextActionDate || 'Mars 2026'),
       ];
     });
 

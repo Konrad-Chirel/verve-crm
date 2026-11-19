@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, sanitizeCsvCell } from '@/lib/utils';
 import { useModal } from '@/context/modal-context';
 import { useCRM } from '@/context/crm-context';
 import type { Company } from '@/lib/mock-data';
@@ -115,6 +115,12 @@ export default function ClientsPage() {
     setCurrentPage(1);
   };
 
+  const sanitizeMailto = (email: string) =>
+    email.replace(/[\s?&<>'"\r\n]/g, '');
+
+  const sanitizeTel = (phone: string) =>
+    phone.replace(/[^0-9+\-().\s]/g, '');
+
   const handleExportCSV = () => {
     const headers = [
       'Societe',
@@ -130,17 +136,17 @@ export default function ClientsPage() {
       'Statut',
     ];
     const rows = filteredCompanies.map((c) => [
-      `"${c.name.replace(/"/g, '""')}"`,
-      `"${c.sector.replace(/"/g, '""')}"`,
-      `"${c.city.replace(/"/g, '""')}"`,
-      `"${c.primaryContact.name.replace(/"/g, '""')}"`,
-      `"${c.primaryContact.role.replace(/"/g, '""')}"`,
-      `"${(c.primaryContact.email || '').replace(/"/g, '""')}"`,
-      `"${(c.primaryContact.phone || '').replace(/"/g, '""')}"`,
-      `"${c.activeDealsDescription.replace(/"/g, '""')}"`,
-      c.cumulativeValue,
-      `"${c.paymentTerms.replace(/"/g, '""')}"`,
-      `"${c.status}"`,
+      sanitizeCsvCell(c.name),
+      sanitizeCsvCell(c.sector),
+      sanitizeCsvCell(c.city),
+      sanitizeCsvCell(c.primaryContact.name),
+      sanitizeCsvCell(c.primaryContact.role),
+      sanitizeCsvCell(c.primaryContact.email || ''),
+      sanitizeCsvCell(c.primaryContact.phone || ''),
+      sanitizeCsvCell(c.activeDealsDescription),
+      Number.isFinite(Number(c.cumulativeValue)) ? Number(c.cumulativeValue) : 0,
+      sanitizeCsvCell(c.paymentTerms),
+      sanitizeCsvCell(c.status),
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n');
@@ -311,7 +317,7 @@ export default function ClientsPage() {
                     <div className="flex items-center gap-2.5 mt-1 text-[11px] text-[#047857]">
                       {comp.primaryContact.email && (
                         <a
-                          href={`mailto:${comp.primaryContact.email}`}
+                          href={`mailto:${sanitizeMailto(comp.primaryContact.email)}`}
                           className="inline-flex items-center gap-1 hover:underline"
                           title={comp.primaryContact.email}
                         >
@@ -321,7 +327,7 @@ export default function ClientsPage() {
                       )}
                       {comp.primaryContact.phone && (
                         <a
-                          href={`tel:${comp.primaryContact.phone}`}
+                          href={`tel:${sanitizeTel(comp.primaryContact.phone)}`}
                           className="inline-flex items-center gap-1 text-[#6B7280] hover:text-[#111827]"
                           title={comp.primaryContact.phone}
                         >

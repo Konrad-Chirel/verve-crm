@@ -24,7 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { STAGES } from '@/lib/mock-data';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, isSafeStoragePath, sanitizeSafeId } from '@/lib/utils';
 import { useCRM } from '@/context/crm-context';
 import { generateContractPDF } from '@/lib/pdf-generator';
 import { createClient } from '@/lib/supabase/client';
@@ -135,14 +135,7 @@ export default function DealDetailPage() {
   };
 
   const handleDownloadAttachment = async (storagePath?: string, fallbackName?: string) => {
-    const isOwnedPath =
-      typeof storagePath === 'string' &&
-      Boolean(user?.id) &&
-      storagePath.startsWith(`${user!.id}/`) &&
-      !storagePath.includes('..') &&
-      !storagePath.includes('\\');
-
-    if (isOwnedPath && supabase && user) {
+    if (isSafeStoragePath(storagePath, user?.id) && supabase && user) {
       try {
         const { data, error } = await supabase.storage
           .from('verve-documents')
@@ -192,7 +185,8 @@ export default function DealDetailPage() {
           .replace(/\.{2,}/g, '_')
           .replace(/^\.+/, '')
           .slice(0, 120) || 'document.pdf';
-        const targetPath = `${user.id}/${deal.id}/${Date.now()}_${safeFileName}`;
+        const safeDealFolder = sanitizeSafeId(deal.id, 'deal');
+        const targetPath = `${user.id}/${safeDealFolder}/${Date.now()}_${safeFileName}`;
         const { error } = await supabase.storage
           .from('verve-documents')
           .upload(targetPath, file, { upsert: true });
@@ -662,7 +656,7 @@ export default function DealDetailPage() {
 
             <div className="space-y-1.5 pt-1 text-xs">
               <a
-                href={`mailto:${deal.contactEmail || 'contact@client.fr'}`}
+                href={`mailto:${(deal.contactEmail || 'contact@client.fr').replace(/[\s?&<>'"\r\n]/g, '')}`}
                 onClick={() =>
                   showToast(`Ouverture de la messagerie (${deal.contactEmail || 'contact@client.fr'})`)
                 }
@@ -674,7 +668,7 @@ export default function DealDetailPage() {
                 <Mail className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
               </a>
               <a
-                href={`tel:${deal.contactPhone || '+33140506070'}`}
+                href={`tel:${(deal.contactPhone || '+33140506070').replace(/[^0-9+\-().\s]/g, '')}`}
                 onClick={() =>
                   showToast(`Appel sortant vers ${deal.contactName}`)
                 }
@@ -701,7 +695,8 @@ export default function DealDetailPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => {
-                  window.location.href = `mailto:${deal.contactEmail || 'contact@client.fr'}?subject=${encodeURIComponent(
+                  const safeEmail = (deal.contactEmail || 'contact@client.fr').replace(/[\s?&<>'"\r\n]/g, '');
+                  window.location.href = `mailto:${safeEmail}?subject=${encodeURIComponent(
                     `Proposition ${deal.companyName} — ${deal.title}`
                   )}`;
                 }}

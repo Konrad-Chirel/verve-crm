@@ -5,17 +5,20 @@ function sanitizeRedirectPath(target: string | null, fallback = '/dashboard'): s
   if (!target) return fallback;
   const trimmed = target.trim();
   if (
-    trimmed.startsWith('/') &&
-    !trimmed.startsWith('//') &&
-    !trimmed.startsWith('/\\') &&
-    !trimmed.includes('@') &&
-    !trimmed.includes('\\') &&
-    !trimmed.includes(':') &&
-    !/[\r\n]/.test(trimmed)
+    !trimmed.startsWith('/') ||
+    trimmed.startsWith('//') ||
+    trimmed.includes('\\') ||
+    /[\x00-\x1f\x7f]/.test(trimmed)
   ) {
-    return trimmed;
+    return fallback;
   }
-  return fallback;
+  try {
+    const parsed = new URL(trimmed, 'https://verve.invalid');
+    if (parsed.origin !== 'https://verve.invalid') return fallback;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
 }
 
 export async function GET(request: Request) {
