@@ -13,7 +13,8 @@ const PUBLIC_AUTH_ROUTES = ['/login', '/register'];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage = PUBLIC_AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isAuthPage =
+    pathname === '/' || PUBLIC_AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
   if (isAuthPage) {
     return <>{children}</>;

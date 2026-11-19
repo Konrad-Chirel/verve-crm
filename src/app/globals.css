@@ -102,7 +102,8 @@ html.dark .focus\:bg-white:focus {
 }
 
 html.dark .bg-white\/95,
-html.dark .bg-white\/90 {
+html.dark .bg-white\/90,
+html.dark .bg-\[\#F7F8F7\]\/90 {
   background-color: rgba(18, 26, 36, 0.92) !important;
 }
 
@@ -197,6 +198,7 @@ html.dark .group:hover .group-hover\:text-\[\#047857\] {
 
 html.dark .bg-\[\#ECFDF5\],
 html.dark .bg-\[\#ECFDF5\]\/60,
+html.dark .bg-\[\#ECFDF5\]\/40,
 html.dark .bg-\[\#D1FAE5\],
 html.dark .hover\:bg-\[\#ECFDF5\]:hover,
 html.dark .bg-primary-light {

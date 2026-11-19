@@ -4,15 +4,15 @@ import { BRAND } from '@/lib/brand';
 
 export function VerveAuthBrand() {
   return (
-    <Link href="/dashboard" className="inline-flex items-center gap-2.5 group">
+    <Link href="/" className="inline-flex items-center gap-2.5 group shrink-0">
       <span className="w-8 h-8 rounded-lg bg-[#047857] flex items-center justify-center text-white font-display font-bold text-sm shrink-0">
         V
       </span>
       <span className="flex flex-col">
-        <span className="font-display font-bold text-base tracking-tight text-[#111827] leading-none">
+        <span className="font-display font-bold text-base tracking-tight text-[#111827] leading-none whitespace-nowrap">
           {BRAND.shortName} CRM
         </span>
-        <span className="text-[11px] text-[#6B7280] font-medium mt-1">
+        <span className="hidden sm:block text-[11px] text-[#6B7280] font-medium mt-1">
           Registre commercial &amp; suivi de mandats B2B
         </span>
       </span>

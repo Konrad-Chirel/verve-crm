@@ -105,7 +105,9 @@ interface CRMContextType {
   toggleRelance: (id: string) => void;
   postponeRelance: (id: string, nextTimeSlot: string) => void;
   addRelance: (rel: Omit<Relance, 'id' | 'done'>) => void;
+  deleteRelance: (id: string) => void;
   addActivity: (act: Omit<Activity, 'id'>) => void;
+  deleteActivity: (id: string) => void;
   updateProfile: (patch: Partial<UserProfile>) => void;
   markAllNotificationsRead: () => void;
   resetDemoData: () => void;
@@ -264,6 +266,90 @@ function mapRowToCompany(r: any): Company {
   };
 }
 
+function mapRelanceToRow(r: Relance, userId: string) {
+  return {
+    id: r.id,
+    user_id: userId,
+    deal_id: r.dealId,
+    time_slot: r.timeSlot,
+    time_label: r.timeLabel,
+    contact_name: r.contactName,
+    contact_role: r.contactRole,
+    company_name: r.companyName,
+    company_initials: r.companyInitials,
+    company_color: r.companyColor,
+    avatar_url: r.avatarUrl,
+    deal_title: r.dealTitle,
+    context_line: r.contextLine,
+    amount: r.amount,
+    status_tag: r.statusTag,
+    action_type: r.actionType,
+    action_label: r.actionLabel,
+    done: r.done,
+  };
+}
+
+function mapRowToRelance(r: any): Relance {
+  return {
+    id: r.id,
+    dealId: r.deal_id || '',
+    timeSlot: r.time_slot || '10:00',
+    timeLabel: r.time_label || 'Matinée',
+    contactName: r.contact_name || '',
+    contactRole: r.contact_role || '',
+    companyName: r.company_name || '',
+    companyInitials: r.company_initials || 'VC',
+    companyColor: r.company_color || 'bg-primary text-white',
+    avatarUrl: r.avatar_url || '',
+    dealTitle: r.deal_title || '',
+    contextLine: r.context_line || '',
+    amount: Number(r.amount) || 0,
+    statusTag: r.status_tag || 'Relance',
+    actionType: r.action_type || 'call',
+    actionLabel: r.action_label || 'Appeler',
+    done: Boolean(r.done),
+  };
+}
+
+function mapActivityToRow(a: Activity, userId: string) {
+  return {
+    id: a.id,
+    user_id: userId,
+    deal_id: a.dealId || '',
+    company_name: a.companyName || '',
+    type: a.type,
+    title: a.title,
+    badge_text: a.badgeText,
+    badge_style: a.badgeStyle,
+    timestamp: a.timestamp,
+    duration: a.duration ?? null,
+    content: a.content,
+    assigned_to: a.assignedTo ?? null,
+    attachment: a.attachment ?? null,
+    status: a.status ?? null,
+    author: a.author,
+  };
+}
+
+function mapRowToActivity(r: any): Activity {
+  return {
+    id: r.id,
+    dealId: r.deal_id || undefined,
+    companyName: r.company_name || undefined,
+    type: r.type || 'note',
+    title: r.title,
+    badgeText: r.badge_text || 'Note interne',
+    badgeStyle: r.badge_style || 'mint',
+    timestamp: r.timestamp || 'À l’instant',
+    duration: r.duration || undefined,
+    content: r.content || '',
+    assignedTo: r.assigned_to || undefined,
+    attachment: r.attachment || undefined,
+    status: r.status || undefined,
+    author: r.author || '',
+  };
+}
+
 export function CRMProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
@@ -338,7 +424,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       }));
 
       try {
-        const [profRes, dealsRes, compRes] = await Promise.all([
+        const [profRes, dealsRes, compRes, relRes, actRes] = await Promise.all([
           supabase.from('verve_profiles').select('*').eq('id', authUser.id).maybeSingle(),
           supabase
             .from('verve_deals')
@@ -346,6 +432,16 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
             .eq('user_id', authUser.id)
             .order('position', { ascending: true }),
           supabase.from('verve_companies').select('*').eq('user_id', authUser.id),
+          supabase
+            .from('verve_relances')
+            .select('*')
+            .eq('user_id', authUser.id)
+            .order('time_slot', { ascending: true }),
+          supabase
+            .from('verve_activities')
+            .select('*')
+            .eq('user_id', authUser.id)
+            .order('created_at', { ascending: false }),
         ]);
 
         if (!mounted) return;
@@ -390,6 +486,26 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
             await supabase
               .from('verve_companies')
               .upsert(MOCK_COMPANIES.map((c) => mapCompanyToRow(c, authUser.id)));
+          }
+
+          if (!relRes.error) {
+            if (Array.isArray(relRes.data) && relRes.data.length > 0) {
+              setRelances(relRes.data.map(mapRowToRelance));
+            } else {
+              await supabase
+                .from('verve_relances')
+                .upsert(MOCK_RELANCES.map((r) => mapRelanceToRow(r, authUser.id)));
+            }
+          }
+
+          if (!actRes.error) {
+            if (Array.isArray(actRes.data) && actRes.data.length > 0) {
+              setActivities(actRes.data.map(mapRowToActivity));
+            } else {
+              await supabase
+                .from('verve_activities')
+                .upsert(MOCK_ACTIVITIES.map((a) => mapActivityToRow(a, authUser.id)));
+            }
           }
         }
       } catch {
@@ -533,6 +649,13 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase, user?.id, storageKeyForUser]);
 
+  const pushActivity = (act: Activity) => {
+    setActivities((prev) => [act, ...prev]);
+    if (supabase && user) {
+      supabase.from('verve_activities').upsert(mapActivityToRow(act, user.id)).then(() => {});
+    }
+  };
+
   const addDeal: CRMContextType['addDeal'] = (input) => {
     const stageObj = STAGES.find((s) => s.id === input.stageId) || STAGES[0];
     const newId = `deal-${Date.now()}`;
@@ -640,7 +763,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       )} € HT) — Contact : ${newDeal.contactName}.`,
       author: profile.name,
     };
-    setActivities((prev) => [newAct, ...prev]);
+    pushActivity(newAct);
 
     showToast(`Mandat « ${newDeal.title} » ajouté au pipeline`);
     return newDeal;
@@ -709,7 +832,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         }%).`,
         author: profile.name,
       };
-      setActivities((prev) => [act, ...prev]);
+      pushActivity(act);
     }
 
     showToast(`Étape mise à jour : ${stageObj.name}`);
@@ -808,7 +931,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         content: `Le dossier « ${targetDealTitle} » est passé à l’étape ${targetDealStageName}.`,
         author: profile.name,
       };
-      setActivities((prev) => [act, ...prev]);
+      pushActivity(act);
       showToast(`Dossier « ${targetCompanyName} » transféré vers ${targetDealStageName}`);
     } else {
       showToast(`Priorité mise à jour dans « ${targetDealStageName} »`);
@@ -836,6 +959,12 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       const next = [...prev];
       next[currentIndex] = neighbor;
       next[neighborIndex] = deal;
+      if (supabase && user) {
+        supabase
+          .from('verve_deals')
+          .upsert(next.map((d, idx) => mapDealToRow(d, user.id, idx)))
+          .then(() => {});
+      }
       return next;
     });
 
@@ -994,33 +1123,32 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const persistRelance = (r: Relance) => {
+    if (supabase && user) {
+      supabase.from('verve_relances').upsert(mapRelanceToRow(r, user.id)).then(() => {});
+    }
+  };
+
   const toggleRelance: CRMContextType['toggleRelance'] = (id) => {
-    setRelances((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const nextDone = !item.done;
-          showToast(
-            nextDone
-              ? `Suivi validé pour ${item.contactName} (${item.companyName})`
-              : `Suivi réactivé pour ${item.contactName}`
-          );
-          return { ...item, done: nextDone };
-        }
-        return item;
-      })
+    const target = relances.find((r) => r.id === id);
+    if (!target) return;
+    const next = { ...target, done: !target.done };
+    setRelances((prev) => prev.map((item) => (item.id === id ? next : item)));
+    persistRelance(next);
+    showToast(
+      next.done
+        ? `Suivi validé pour ${target.contactName} (${target.companyName})`
+        : `Suivi réactivé pour ${target.contactName}`
     );
   };
 
   const postponeRelance: CRMContextType['postponeRelance'] = (id, nextTimeSlot) => {
-    setRelances((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          showToast(`Créneau de ${item.contactName} reporté à ${nextTimeSlot}`);
-          return { ...item, timeSlot: nextTimeSlot };
-        }
-        return item;
-      })
-    );
+    const target = relances.find((r) => r.id === id);
+    if (!target) return;
+    const next = { ...target, timeSlot: nextTimeSlot };
+    setRelances((prev) => prev.map((item) => (item.id === id ? next : item)));
+    persistRelance(next);
+    showToast(`Créneau de ${target.contactName} reporté à ${nextTimeSlot}`);
   };
 
   const addRelance: CRMContextType['addRelance'] = (rel) => {
@@ -1030,7 +1158,17 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       done: false,
     };
     setRelances((prev) => [newRel, ...prev]);
+    persistRelance(newRel);
     showToast(`Relance programmée à ${rel.timeSlot} avec ${rel.contactName}`);
+  };
+
+  const deleteRelance: CRMContextType['deleteRelance'] = (id) => {
+    const target = relances.find((r) => r.id === id);
+    setRelances((prev) => prev.filter((r) => r.id !== id));
+    if (supabase && user) {
+      supabase.from('verve_relances').delete().eq('user_id', user.id).eq('id', id).then(() => {});
+    }
+    if (target) showToast(`Relance avec ${target.contactName} supprimée`);
   };
 
   const addActivity: CRMContextType['addActivity'] = (act) => {
@@ -1039,7 +1177,18 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       id: `act-${Date.now()}`,
     };
     setActivities((prev) => [newAct, ...prev]);
+    if (supabase && user) {
+      supabase.from('verve_activities').upsert(mapActivityToRow(newAct, user.id)).then(() => {});
+    }
     showToast('Interaction enregistrée au journal du dossier');
+  };
+
+  const deleteActivity: CRMContextType['deleteActivity'] = (id) => {
+    setActivities((prev) => prev.filter((a) => a.id !== id));
+    if (supabase && user) {
+      supabase.from('verve_activities').delete().eq('user_id', user.id).eq('id', id).then(() => {});
+    }
+    showToast('Entrée supprimée du journal');
   };
 
   const updateProfile: CRMContextType['updateProfile'] = (patch) => {
@@ -1111,7 +1260,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         toggleRelance,
         postponeRelance,
         addRelance,
+        deleteRelance,
         addActivity,
+        deleteActivity,
         updateProfile,
         markAllNotificationsRead,
         resetDemoData,

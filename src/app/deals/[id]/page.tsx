@@ -39,6 +39,7 @@ export default function DealDetailPage() {
     updateDeal,
     deleteDeal,
     addActivity,
+    deleteActivity,
     addRelance,
     showToast,
   } = useCRM();
@@ -64,6 +65,10 @@ export default function DealDetailPage() {
   const [editContactName, setEditContactName] = useState('');
   const [editContactRole, setEditContactRole] = useState('');
   const [editNotes, setEditNotes] = useState('');
+  const [editContactEmail, setEditContactEmail] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
+  const [editNextAction, setEditNextAction] = useState('');
+  const [pendingActId, setPendingActId] = useState<string | null>(null);
 
   if (!deal) {
     return (
@@ -83,6 +88,9 @@ export default function DealDetailPage() {
     setEditCloseDate(deal.nextActionDate || '30 mars 2026');
     setEditContactName(deal.contactName);
     setEditContactRole(deal.contactRole);
+    setEditContactEmail(deal.contactEmail || '');
+    setEditContactPhone(deal.contactPhone || '');
+    setEditNextAction(deal.nextAction || '');
     setEditNotes(
       deal.notes ||
         'Le client souhaite sécuriser le planning de déploiement avant la fin du trimestre. La garantie de livraison sous 8 semaines constitue un critère déterminant.'
@@ -101,6 +109,9 @@ export default function DealDetailPage() {
       nextActionDate: editCloseDate.trim() || deal.nextActionDate,
       contactName: editContactName.trim() || deal.contactName,
       contactRole: editContactRole.trim() || deal.contactRole,
+      contactEmail: editContactEmail.trim(),
+      contactPhone: editContactPhone.trim(),
+      nextAction: editNextAction.trim() || undefined,
       notes: editNotes.trim(),
     });
     setIsEditing(false);
@@ -374,6 +385,36 @@ export default function DealDetailPage() {
                 <Input
                   value={editCloseDate}
                   onChange={(e) => setEditCloseDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#4B5563] mb-1">
+                  E-mail de l’interlocuteur
+                </label>
+                <Input
+                  type="email"
+                  value={editContactEmail}
+                  onChange={(e) => setEditContactEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[#4B5563] mb-1">
+                  Téléphone
+                </label>
+                <Input
+                  type="tel"
+                  value={editContactPhone}
+                  onChange={(e) => setEditContactPhone(e.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-[#4B5563] mb-1">
+                  Prochaine action
+                </label>
+                <Input
+                  value={editNextAction}
+                  onChange={(e) => setEditNextAction(e.target.value)}
+                  placeholder="Ex. Appeler pour valider le calendrier"
                 />
               </div>
             </div>
@@ -809,6 +850,37 @@ export default function DealDetailPage() {
                       <div className="flex items-center gap-3 text-xs text-[#6B7280] tabular-nums">
                         {act.duration && <span>{act.duration}</span>}
                         <span>{act.timestamp}</span>
+                        {pendingActId === act.id ? (
+                          <span className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                deleteActivity(act.id);
+                                setPendingActId(null);
+                              }}
+                              className="h-7 px-2 rounded-md bg-[#BE123C] text-white text-[11px] font-semibold cursor-pointer"
+                            >
+                              Supprimer
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingActId(null)}
+                              className="h-7 px-2 rounded-md text-[11px] font-medium text-[#4B5563] hover:bg-[#F3F4F6] cursor-pointer"
+                            >
+                              Annuler
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setPendingActId(act.id)}
+                            aria-label="Supprimer cette entrée du journal"
+                            title="Supprimer"
+                            className="w-7 h-7 rounded-md flex items-center justify-center text-[#9CA3AF] hover:text-[#BE123C] hover:bg-[#FFF1F2] transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

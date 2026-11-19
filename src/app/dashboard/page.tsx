@@ -9,6 +9,7 @@ import {
   Plus,
   Mail,
   X,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +28,11 @@ export default function DashboardPage() {
     toggleRelance,
     postponeRelance,
     addRelance,
+    deleteRelance,
     showToast,
   } = useCRM();
+
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const [selectedPeriod, setSelectedPeriod] = useState<'month' | 'quarter' | 'year'>('month');
   const [relanceFilter, setRelanceFilter] = useState<'all' | 'pending'>('all');
@@ -480,6 +484,38 @@ export default function DashboardPage() {
                         </>
                       )}
                     </Button>
+                  )}
+
+                  {pendingDeleteId === item.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          deleteRelance(item.id);
+                          setPendingDeleteId(null);
+                        }}
+                        className="h-8 px-2.5 rounded-md bg-[#BE123C] text-white text-xs font-semibold cursor-pointer whitespace-nowrap"
+                      >
+                        Supprimer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingDeleteId(null)}
+                        className="h-8 px-2 rounded-md text-xs font-medium text-[#4B5563] hover:bg-[#F3F4F6] cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPendingDeleteId(item.id)}
+                      aria-label={`Supprimer la relance avec ${item.contactName}`}
+                      title="Supprimer la relance"
+                      className="w-8 h-8 rounded-md flex items-center justify-center text-[#9CA3AF] hover:text-[#BE123C] hover:bg-[#FFF1F2] transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
               </div>

@@ -144,41 +144,49 @@ export default function RegisterPage() {
     <main className="min-h-screen flex bg-[#F7F8F7] text-[#111827]">
       <VerveAuthShowcase variant="register" />
 
-      <section className="flex-1 flex flex-col min-h-screen">
+      <section className="flex-1 flex flex-col min-h-screen min-w-0">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-5 sm:px-8 lg:px-12 h-16 sm:h-20">
-          <div className="lg:hidden">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-8 lg:px-12 h-16 sm:h-20 shrink-0">
+          <div className="lg:hidden min-w-0">
             <VerveAuthBrand />
           </div>
-          <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden lg:inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors whitespace-nowrap"
+          >
+            <ArrowLeft className="w-4 h-4 shrink-0" />
+            <span>Retour à la connexion</span>
+          </Link>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="/login"
+              className="lg:hidden inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-xs font-medium text-[#4B5563] hover:text-[#111827] hover:bg-[#F3F4F6] transition-colors whitespace-nowrap"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+              <span>Connexion</span>
+            </Link>
+
             <button
               type="button"
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
               aria-label="Basculer le thème"
-              className="w-8 h-8 rounded-lg bg-white border border-[#E4E7EC] hover:border-[#047857] flex items-center justify-center text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer shadow-2xs"
+              className="w-9 h-9 rounded-lg bg-white border border-[#E4E7EC] hover:border-[#047857] flex items-center justify-center text-[#4B5563] hover:text-[#111827] transition-colors cursor-pointer shrink-0"
             >
               {theme === 'dark' ? (
-                <Sun className="w-3.5 h-3.5 text-[#34D399]" />
+                <Sun className="w-4 h-4 text-[#34D399]" />
               ) : (
-                <Moon className="w-3.5 h-3.5" />
+                <Moon className="w-4 h-4" />
               )}
             </button>
-
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-[#4B5563] hover:text-[#111827] transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Retour à la connexion</span>
-            </Link>
           </div>
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-5 sm:px-8 pb-12">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-8 pt-4 sm:pt-0 pb-12">
           <div className="w-full max-w-[420px]">
-            <header className="mb-7">
-              <h2 className="font-display text-[26px] font-bold tracking-tight text-[#111827] leading-tight">
+            <header className="mb-6 sm:mb-7">
+              <h2 className="font-display text-2xl sm:text-[26px] font-bold tracking-tight text-[#111827] leading-tight">
                 Créer votre espace cabinet
               </h2>
               <p className="mt-1.5 text-sm text-[#4B5563]">
