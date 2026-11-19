@@ -18,6 +18,8 @@ import {
   Trash2,
   X,
   AlertTriangle,
+  Loader2,
+  Cloud,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,7 @@ import { STAGES } from '@/lib/mock-data';
 import { formatCurrency } from '@/lib/utils';
 import { useCRM } from '@/context/crm-context';
 import { generateContractPDF } from '@/lib/pdf-generator';
+import { createClient } from '@/lib/supabase/client';
 
 export default function DealDetailPage() {
   const params = useParams();
@@ -32,6 +35,7 @@ export default function DealDetailPage() {
   const rawId = Array.isArray(params?.id) ? params.id[0] : params?.id;
 
   const {
+    user,
     deals,
     activities,
     profile,
@@ -43,6 +47,9 @@ export default function DealDetailPage() {
     addRelance,
     showToast,
   } = useCRM();
+  const supabase = createClient();
+
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   const deal =
     deals.find((d) => d.id === rawId) ||
@@ -127,32 +134,97 @@ export default function DealDetailPage() {
     }
   };
 
-  const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDownloadAttachment = async (storagePath?: string, fallbackName?: string) => {
+    if (storagePath && supabase && user) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('verve-documents')
+          .createSignedUrl(storagePath, 60, {
+            download: fallbackName || deal.documentName || true,
+          });
+        if (!error && data?.signedUrl) {
+          window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+          showToast(`Téléchargement sécurisé lancé (${fallbackName || deal.documentName})`);
+          return;
+        }
+      } catch (err) {
+        console.error('Erreur téléchargement Supabase Storage:', err);
+      }
+    }
+    handleDownloadProposal();
+  };
+
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      showToast('Fichier trop volumineux (maximum 10 Mo).');
+      return;
+    }
+
+    const allowedExt = /\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g)$/i;
+    if (!allowedExt.test(file.name)) {
+      showToast('Format non pris en charge (PDF, Word, Excel, CSV, PNG, JPG).');
+      return;
+    }
+
     const sizeMo = `${(file.size / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
     const formattedSize =
       sizeMo === '0,0 Mo' ? `${Math.max(1, Math.round(file.size / 1024))} Ko` : sizeMo;
+
+    let uploadedPath: string | undefined;
+
+    if (supabase && user) {
+      setIsUploadingDoc(true);
+      try {
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const targetPath = `${user.id}/${deal.id}/${Date.now()}_${safeFileName}`;
+        const { error } = await supabase.storage
+          .from('verve-documents')
+          .upload(targetPath, file, { upsert: true });
+
+        if (!error) {
+          uploadedPath = targetPath;
+        } else {
+          console.warn('Supabase Storage upload fallback:', error.message);
+        }
+      } catch (err) {
+        console.warn('Supabase Storage error:', err);
+      } finally {
+        setIsUploadingDoc(false);
+      }
+    }
+
     updateDeal(deal.id, {
       documentName: file.name,
       documentSize: formattedSize,
+      documentPath: uploadedPath,
     });
     addActivity({
       dealId: deal.id,
       companyName: deal.companyName,
       type: 'contrat',
       title: `Pièce jointe ajoutée (${file.name})`,
-      badgeText: 'Document',
+      badgeText: uploadedPath ? 'Cloud PDF' : 'Document',
       badgeStyle: 'mint',
       timestamp: 'À l’instant',
-      content: `Nouveau fichier contractuel rattaché au dossier ${deal.companyName}.`,
+      content: uploadedPath
+        ? `Fichier téléversé sur Supabase Storage et rattaché au dossier ${deal.companyName}.`
+        : `Nouveau fichier contractuel rattaché au dossier ${deal.companyName}.`,
       author: profile.name,
       attachment: {
         name: file.name,
         size: formattedSize,
         time: 'À l’instant',
+        path: uploadedPath,
       },
     });
+    if (uploadedPath) {
+      showToast(`Document « ${file.name} » sauvegardé sur Supabase Storage`);
+    }
   };
 
   const handleAddActivity = (e: React.FormEvent) => {
@@ -667,11 +739,21 @@ export default function DealDetailPage() {
               </span>
               <button
                 type="button"
+                disabled={isUploadingDoc}
                 onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-medium text-[#047857] hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-medium text-[#047857] hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-60"
               >
-                <Plus className="w-3 h-3" />
-                <span>Remplacer</span>
+                {isUploadingDoc ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Envoi…</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-3 h-3" />
+                    <span>Remplacer</span>
+                  </>
+                )}
               </button>
             </div>
 
@@ -683,20 +765,23 @@ export default function DealDetailPage() {
                     {deal.documentName || `Proposition_${deal.companyName.replace(/\s+/g, '_')}_v2.pdf`}
                   </div>
                   <div className="text-[11px] text-[#6B7280] mt-0.5">
-                    {deal.documentSize || '3,8 Mo'} — Transmis au signataire
+                    {deal.documentSize || '3,8 Mo'} — {deal.documentPath ? 'Stocké dans le cloud privé' : 'Transmis au signataire'}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-[#E4E7EC] text-xs">
-                <span className="text-[#6B7280]">Document vérifié</span>
+                <span className="inline-flex items-center gap-1 text-[#6B7280]">
+                  {deal.documentPath && <Cloud className="w-3.5 h-3.5 text-[#047857]" />}
+                  <span>{deal.documentPath ? 'Supabase Storage' : 'Document vérifié'}</span>
+                </span>
                 <button
                   type="button"
-                  onClick={handleDownloadProposal}
+                  onClick={() => handleDownloadAttachment(deal.documentPath, deal.documentName)}
                   className="inline-flex items-center gap-1.5 font-semibold text-[#047857] hover:underline cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Télécharger le PDF</span>
+                  <span>{deal.documentPath ? 'Télécharger le fichier' : 'Télécharger le PDF'}</span>
                 </button>
               </div>
             </div>
@@ -896,7 +981,9 @@ export default function DealDetailPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={handleDownloadProposal}
+                          onClick={() =>
+                            handleDownloadAttachment(act.attachment?.path, act.attachment?.name)
+                          }
                           className="text-xs text-[#047857] font-semibold hover:underline flex items-center gap-1 cursor-pointer shrink-0 self-start sm:self-auto"
                         >
                           <Download className="w-3 h-3" />

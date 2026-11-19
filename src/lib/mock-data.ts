@@ -26,6 +26,7 @@ export interface Deal {
   notes?: string;
   documentName?: string;
   documentSize?: string;
+  documentPath?: string;
   createdAt: string;
 }
 
@@ -100,6 +101,7 @@ export interface Activity {
     name: string;
     size: string;
     time?: string;
+    path?: string;
   };
   status?: string;
   author: string;

@@ -1,13 +1,26 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Check, RotateCcw, LogOut, ShieldCheck, Sun, Moon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Check, RotateCcw, LogOut, ShieldCheck, Sun, Moon, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCRM } from '@/context/crm-context';
 
 export default function ParametresPage() {
-  const { profile, updateProfile, resetDemoData, user, isCloudSynced, signOut, theme, toggleTheme } = useCRM();
+  const {
+    profile,
+    updateProfile,
+    resetDemoData,
+    exportBackup,
+    importBackup,
+    showToast,
+    user,
+    isCloudSynced,
+    signOut,
+    theme,
+    toggleTheme,
+  } = useCRM();
+  const backupInputRef = useRef<HTMLInputElement | null>(null);
 
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState(profile.name);
@@ -44,6 +57,22 @@ export default function ParametresPage() {
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Fichier de sauvegarde trop volumineux (max 5 Mo).');
+      return;
+    }
+    try {
+      const text = await file.text();
+      importBackup(text);
+    } catch {
+      showToast('Erreur lors de la lecture du fichier de sauvegarde.');
+    }
   };
 
   return (
@@ -181,6 +210,47 @@ export default function ParametresPage() {
             </>
           )}
         </Button>
+      </div>
+
+      {/* JSON Backup & Restore Section */}
+      <div className="bg-white border border-[#E4E7EC] rounded-xl shadow-2xs p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h3 className="font-display font-bold text-sm text-[#111827]">
+            Sauvegarde &amp; Restauration complète (JSON)
+          </h3>
+          <p className="text-xs text-[#6B7280] max-w-lg">
+            Exportez l’intégralité de votre cabinet (mandats, sociétés, relances, journal d’activités et objectifs) ou restaurez une archive existante en un clic.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+          <input
+            ref={backupInputRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={exportBackup}
+            className="w-full sm:w-auto"
+          >
+            <Download className="w-3.5 h-3.5 text-[#047857]" />
+            <span>Exporter (.json)</span>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            onClick={() => backupInputRef.current?.click()}
+            className="w-full sm:w-auto"
+          >
+            <Upload className="w-3.5 h-3.5 text-[#4B5563]" />
+            <span>Restaurer</span>
+          </Button>
+        </div>
       </div>
 
       {/* Demo Data Reset Section */}

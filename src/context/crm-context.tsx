@@ -111,6 +111,8 @@ interface CRMContextType {
   updateProfile: (patch: Partial<UserProfile>) => void;
   markAllNotificationsRead: () => void;
   resetDemoData: () => void;
+  exportBackup: () => void;
+  importBackup: (rawJson: string) => boolean;
 }
 
 const STORAGE_KEY = 'verve_crm_state_v2';
@@ -187,6 +189,7 @@ function mapDealToRow(d: Deal, userId: string, position = 0) {
     notes: d.notes || '',
     document_name: d.documentName || '',
     document_size: d.documentSize || '',
+    document_path: d.documentPath || '',
     position,
     created_at: d.createdAt,
   };
@@ -217,6 +220,7 @@ function mapRowToDeal(r: any): Deal {
     notes: r.notes || undefined,
     documentName: r.document_name || undefined,
     documentSize: r.document_size || undefined,
+    documentPath: r.document_path || undefined,
     createdAt: r.created_at || new Date().toISOString().slice(0, 10),
   };
 }
@@ -1230,6 +1234,112 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     showToast('Données de démonstration réinitialisées');
   };
 
+  const exportBackup = () => {
+    try {
+      const payload = {
+        app: 'Verve CRM',
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        profile,
+        deals,
+        companies,
+        relances,
+        activities,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: 'application/json;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `verve-crm-backup-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`Sauvegarde exportée (verve-crm-backup-${dateStr}.json)`);
+    } catch {
+      showToast('Erreur lors de l’export de la sauvegarde JSON');
+    }
+  };
+
+  const importBackup: CRMContextType['importBackup'] = (rawJson) => {
+    try {
+      const parsed = JSON.parse(rawJson);
+      if (
+        !parsed ||
+        typeof parsed !== 'object' ||
+        (!Array.isArray(parsed.deals) && !Array.isArray(parsed.companies))
+      ) {
+        showToast('Fichier JSON invalide : structure Verve CRM non reconnue.');
+        return false;
+      }
+
+      const nextDeals: Deal[] = Array.isArray(parsed.deals) ? parsed.deals : deals;
+      const nextCompanies: Company[] = Array.isArray(parsed.companies) ? parsed.companies : companies;
+      const nextRelances: Relance[] = Array.isArray(parsed.relances) ? parsed.relances : relances;
+      const nextActivities: Activity[] = Array.isArray(parsed.activities) ? parsed.activities : activities;
+      const nextProfile: UserProfile =
+        parsed.profile && typeof parsed.profile === 'object'
+          ? { ...INITIAL_PROFILE, ...parsed.profile }
+          : profile;
+
+      setDeals(nextDeals);
+      setCompanies(nextCompanies);
+      setRelances(nextRelances);
+      setActivities(nextActivities);
+      setProfile(nextProfile);
+
+      if (supabase && user) {
+        supabase
+          .from('verve_profiles')
+          .upsert({
+            id: user.id,
+            email: nextProfile.email,
+            name: nextProfile.name,
+            role: nextProfile.role,
+            agency: nextProfile.agency,
+            monthly_target: nextProfile.monthlyTarget,
+            quarterly_target: nextProfile.quarterlyTarget,
+          })
+          .then(() => {});
+        if (nextDeals.length > 0) {
+          supabase
+            .from('verve_deals')
+            .upsert(nextDeals.map((d, idx) => mapDealToRow(d, user.id, idx)))
+            .then(() => {});
+        }
+        if (nextCompanies.length > 0) {
+          supabase
+            .from('verve_companies')
+            .upsert(nextCompanies.map((c) => mapCompanyToRow(c, user.id)))
+            .then(() => {});
+        }
+        if (nextRelances.length > 0) {
+          supabase
+            .from('verve_relances')
+            .upsert(nextRelances.map((r) => mapRelanceToRow(r, user.id)))
+            .then(() => {});
+        }
+        if (nextActivities.length > 0) {
+          supabase
+            .from('verve_activities')
+            .upsert(nextActivities.map((a) => mapActivityToRow(a, user.id)))
+            .then(() => {});
+        }
+      }
+
+      showToast(
+        `Sauvegarde restaurée (${nextDeals.length} mandats, ${nextCompanies.length} sociétés)`
+      );
+      return true;
+    } catch {
+      showToast('Impossible de lire le fichier JSON (syntaxe invalide).');
+      return false;
+    }
+  };
+
   return (
     <CRMContext.Provider
       value={{
@@ -1266,6 +1376,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         updateProfile,
         markAllNotificationsRead,
         resetDemoData,
+        exportBackup,
+        importBackup,
       }}
     >
       {children}

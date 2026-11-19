@@ -16,13 +16,10 @@ import {
   Plus,
   Check,
   Sparkles,
-  Lock,
-  Database,
-  KeyRound,
-  LogOut,
 } from 'lucide-react';
 import { useCRM } from '@/context/crm-context';
 import { DocumentDeck } from '@/components/landing/document-deck';
+import { SecurityCards } from '@/components/landing/security-cards';
 
 /* ---------------------------------------------------------------------------
    Hero demo data — the stage ladder used throughout Verve
@@ -730,41 +727,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              {[
-                {
-                  icon: Database,
-                  title: 'Isolation par compte (RLS)',
-                  text: 'Chaque mandat, société et relance est verrouillé par une politique Row Level Security liée à votre identifiant.',
-                },
-                {
-                  icon: KeyRound,
-                  title: 'Auth chiffrée & PKCE',
-                  text: 'Connexion e-mail ou Google via Supabase SSR, avec middleware Edge default-deny sur chaque route privée.',
-                },
-                {
-                  icon: Lock,
-                  title: 'En-têtes HTTP renforcés',
-                  text: 'Content-Security-Policy, HSTS preload, X-Frame-Options DENY et protection anti-Open Redirect actifs.',
-                },
-                {
-                  icon: LogOut,
-                  title: 'Zéro trace à la sortie',
-                  text: 'Dès la déconnexion, le cache local et les cookies de session sont purgés pour sécuriser les postes partagés.',
-                },
-              ].map((pillar) => (
-                <div
-                  key={pillar.title}
-                  className="rounded-2xl bg-white border border-[#E4E7EC] hover:border-[#047857]/40 p-5 sm:p-6 transition-colors shadow-2xs"
-                >
-                  <span className="w-10 h-10 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] flex items-center justify-center">
-                    <pillar.icon className="w-5 h-5" />
-                  </span>
-                  <h3 className="mt-4 font-display text-base font-bold text-[#111827]">{pillar.title}</h3>
-                  <p className="mt-1.5 text-xs sm:text-sm text-[#4B5563] leading-relaxed">{pillar.text}</p>
-                </div>
-              ))}
-            </div>
+            <SecurityCards />
           </div>
         </section>
 

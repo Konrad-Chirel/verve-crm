@@ -81,6 +81,7 @@ create table if not exists public.verve_deals (
   notes text default '',
   document_name text default '',
   document_size text default '',
+  document_path text default '',
   position integer not null default 0,
   created_at text not null default '',
   updated_at timestamptz not null default now(),
@@ -179,4 +180,49 @@ begin
   return new;
 end;
 $$;
+
+-- Migration idempotente pour les bases déjà créées
+alter table public.verve_deals
+  add column if not exists document_path text default '';
+
+-- 7. BUCKET PRIVÉ SUPABASE STORAGE POUR LES PIÈCES CONTRACTUELLES (verve-documents)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'verve-documents',
+  'verve-documents',
+  false,
+  10485760,
+  array[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/csv',
+    'text/plain',
+    'image/png',
+    'image/jpeg'
+  ]
+)
+on conflict (id) do nothing;
+
+drop policy if exists "verve_docs_select_own" on storage.objects;
+create policy "verve_docs_select_own"
+  on storage.objects for select
+  using (bucket_id = 'verve-documents' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "verve_docs_insert_own" on storage.objects;
+create policy "verve_docs_insert_own"
+  on storage.objects for insert
+  with check (bucket_id = 'verve-documents' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "verve_docs_update_own" on storage.objects;
+create policy "verve_docs_update_own"
+  on storage.objects for update
+  using (bucket_id = 'verve-documents' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'verve-documents' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "verve_docs_delete_own" on storage.objects;
+create policy "verve_docs_delete_own"
+  on storage.objects for delete
+  using (bucket_id = 'verve-documents' and (storage.foldername(name))[1] = auth.uid()::text);
 
