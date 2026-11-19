@@ -92,7 +92,7 @@ export default function ParametresPage() {
       <div className="bg-white border border-[#E4E7EC] rounded-xl shadow-2xs p-4 sm:p-6">
         <form onSubmit={handleSave} className="space-y-6">
           <div className="flex items-center gap-3.5 pb-5 border-b border-[#E4E7EC]">
-            {profile.avatarUrl ? (
+            {profile.avatarUrl && /^https:\/\/[^\s"'<>]+$/i.test(profile.avatarUrl) ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={profile.avatarUrl}

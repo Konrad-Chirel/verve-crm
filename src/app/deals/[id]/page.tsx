@@ -135,14 +135,21 @@ export default function DealDetailPage() {
   };
 
   const handleDownloadAttachment = async (storagePath?: string, fallbackName?: string) => {
-    if (storagePath && supabase && user) {
+    const isOwnedPath =
+      typeof storagePath === 'string' &&
+      Boolean(user?.id) &&
+      storagePath.startsWith(`${user!.id}/`) &&
+      !storagePath.includes('..') &&
+      !storagePath.includes('\\');
+
+    if (isOwnedPath && supabase && user) {
       try {
         const { data, error } = await supabase.storage
           .from('verve-documents')
           .createSignedUrl(storagePath, 60, {
             download: fallbackName || deal.documentName || true,
           });
-        if (!error && data?.signedUrl) {
+        if (!error && data?.signedUrl && data.signedUrl.startsWith('https://')) {
           window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
           showToast(`Téléchargement sécurisé lancé (${fallbackName || deal.documentName})`);
           return;
@@ -180,7 +187,11 @@ export default function DealDetailPage() {
     if (supabase && user) {
       setIsUploadingDoc(true);
       try {
-        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const safeFileName = file.name
+          .replace(/[^a-zA-Z0-9._-]/g, '_')
+          .replace(/\.{2,}/g, '_')
+          .replace(/^\.+/, '')
+          .slice(0, 120) || 'document.pdf';
         const targetPath = `${user.id}/${deal.id}/${Date.now()}_${safeFileName}`;
         const { error } = await supabase.storage
           .from('verve-documents')

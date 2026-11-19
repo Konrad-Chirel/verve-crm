@@ -33,7 +33,8 @@ export function Avatar({
     xl: 'w-12 h-12 text-headline-sm',
   };
 
-  const showImg = Boolean(src) && !imgFailed;
+  const isSafeImageSrc = typeof src === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(src.trim());
+  const showImg = isSafeImageSrc && !imgFailed;
 
   return (
     <div className={cn('relative inline-flex shrink-0 select-none', className)} {...props}>

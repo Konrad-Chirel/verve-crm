@@ -1269,25 +1269,172 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isSafeHttpsUrl = (url: unknown): url is string =>
+    typeof url === 'string' && /^https:\/\/[^\s"'<>]+$/i.test(url.trim());
+
+  const isSafeStoragePath = (path: unknown, uid?: string | null): path is string =>
+    typeof path === 'string' &&
+    Boolean(uid) &&
+    path.startsWith(`${uid}/`) &&
+    !path.includes('..') &&
+    !path.includes('\\');
+
+  const clampNum = (v: unknown, fallback: number, min = 0, max = 100_000_000) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  };
+
   const importBackup: CRMContextType['importBackup'] = (rawJson) => {
     try {
-      const parsed = JSON.parse(rawJson);
+      const parsed = JSON.parse(rawJson, (key, value) => {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+          return undefined;
+        }
+        return value;
+      });
       if (
         !parsed ||
         typeof parsed !== 'object' ||
+        Array.isArray(parsed) ||
         (!Array.isArray(parsed.deals) && !Array.isArray(parsed.companies))
       ) {
         showToast('Fichier JSON invalide : structure Verve CRM non reconnue.');
         return false;
       }
 
-      const nextDeals: Deal[] = Array.isArray(parsed.deals) ? parsed.deals : deals;
-      const nextCompanies: Company[] = Array.isArray(parsed.companies) ? parsed.companies : companies;
-      const nextRelances: Relance[] = Array.isArray(parsed.relances) ? parsed.relances : relances;
-      const nextActivities: Activity[] = Array.isArray(parsed.activities) ? parsed.activities : activities;
+      const MAX_RECORDS = 500;
+      const validStages = new Set<StageId>(['lead', 'discovery', 'proposal', 'negotiation', 'won']);
+
+      const nextDeals: Deal[] = Array.isArray(parsed.deals)
+        ? parsed.deals.slice(0, MAX_RECORDS).filter((d: any) => d && typeof d === 'object' && typeof d.title === 'string').map((d: any, i: number): Deal => ({
+            id: typeof d.id === 'string' && d.id.trim() ? d.id.slice(0, 80) : `deal-imp-${Date.now()}-${i}`,
+            title: String(d.title).slice(0, 160),
+            companyId: typeof d.companyId === 'string' ? d.companyId.slice(0, 80) : '',
+            companyName: typeof d.companyName === 'string' ? d.companyName.slice(0, 120) : 'Société',
+            companyCity: typeof d.companyCity === 'string' ? d.companyCity.slice(0, 80) : 'Paris',
+            companySector: typeof d.companySector === 'string' ? d.companySector.slice(0, 80) : 'Conseil & Tech B2B',
+            contactName: typeof d.contactName === 'string' ? d.contactName.slice(0, 120) : '',
+            contactRole: typeof d.contactRole === 'string' ? d.contactRole.slice(0, 120) : 'Directeur Général',
+            contactEmail: typeof d.contactEmail === 'string' ? d.contactEmail.slice(0, 160) : '',
+            contactPhone: typeof d.contactPhone === 'string' ? d.contactPhone.slice(0, 40) : '',
+            companyInitials: typeof d.companyInitials === 'string' ? d.companyInitials.slice(0, 3) : 'VC',
+            companyColor: typeof d.companyColor === 'string' ? d.companyColor.slice(0, 80) : 'bg-primary text-white',
+            amount: clampNum(d.amount, 0),
+            probability: clampNum(d.probability, 25, 0, 100),
+            stageId: validStages.has(d.stageId) ? d.stageId : 'lead',
+            statusBadge: typeof d.statusBadge === 'string' ? d.statusBadge.slice(0, 60) : 'Dossier actif',
+            badgeType: d.badgeType === 'hot' || d.badgeType === 'urgent' ? d.badgeType : 'normal',
+            nextAction: typeof d.nextAction === 'string' ? d.nextAction.slice(0, 200) : undefined,
+            nextActionDate: typeof d.nextActionDate === 'string' ? d.nextActionDate.slice(0, 60) : undefined,
+            metaInfo: Array.isArray(d.metaInfo) ? d.metaInfo.slice(0, 10).map((m: unknown) => String(m).slice(0, 100)) : [],
+            notes: typeof d.notes === 'string' ? d.notes.slice(0, 4000) : undefined,
+            documentName: typeof d.documentName === 'string' ? d.documentName.slice(0, 160) : undefined,
+            documentSize: typeof d.documentSize === 'string' ? d.documentSize.slice(0, 30) : undefined,
+            documentPath: isSafeStoragePath(d.documentPath, user?.id) ? d.documentPath : undefined,
+            createdAt: typeof d.createdAt === 'string' ? d.createdAt.slice(0, 30) : new Date().toISOString().slice(0, 10),
+          }))
+        : deals;
+
+      const nextCompanies: Company[] = Array.isArray(parsed.companies)
+        ? parsed.companies.slice(0, MAX_RECORDS).filter((c: any) => c && typeof c === 'object' && typeof c.name === 'string').map((c: any, i: number): Company => ({
+            id: typeof c.id === 'string' && c.id.trim() ? c.id.slice(0, 80) : `comp-imp-${Date.now()}-${i}`,
+            primaryDealId: typeof c.primaryDealId === 'string' ? c.primaryDealId.slice(0, 80) : '',
+            name: String(c.name).slice(0, 120),
+            sector: typeof c.sector === 'string' ? c.sector.slice(0, 80) : 'Services & Tech B2B',
+            city: typeof c.city === 'string' ? c.city.slice(0, 80) : 'Paris',
+            initials: typeof c.initials === 'string' ? c.initials.slice(0, 3) : getInitials(String(c.name)),
+            color: typeof c.color === 'string' ? c.color.slice(0, 80) : 'bg-primary text-white',
+            primaryContact: {
+              name: typeof c.primaryContact?.name === 'string' ? c.primaryContact.name.slice(0, 120) : 'Contact',
+              role: typeof c.primaryContact?.role === 'string' ? c.primaryContact.role.slice(0, 120) : 'Directeur',
+              email: typeof c.primaryContact?.email === 'string' ? c.primaryContact.email.slice(0, 160) : '',
+              phone: typeof c.primaryContact?.phone === 'string' ? c.primaryContact.phone.slice(0, 40) : '',
+              initials: typeof c.primaryContact?.initials === 'string' ? c.primaryContact.initials.slice(0, 3) : 'CT',
+            },
+            activeDealsCount: clampNum(c.activeDealsCount, 1, 0, 1000),
+            activeDealsDescription: typeof c.activeDealsDescription === 'string' ? c.activeDealsDescription.slice(0, 160) : '',
+            cumulativeValue: clampNum(c.cumulativeValue, 0),
+            paymentTerms: typeof c.paymentTerms === 'string' ? c.paymentTerms.slice(0, 60) : 'Échéance 30j',
+            status:
+              c.status === 'Client Récurrent' ||
+              c.status === 'Négociation' ||
+              c.status === 'Client Actif' ||
+              c.status === 'Découverte'
+                ? c.status
+                : 'Offre en cours',
+            statusColor:
+              c.statusColor === 'stage-2' || c.statusColor === 'stage-3' || c.statusColor === 'stage-4'
+                ? c.statusColor
+                : 'primary',
+          }))
+        : companies;
+
+      const nextRelances: Relance[] = Array.isArray(parsed.relances)
+        ? parsed.relances.slice(0, MAX_RECORDS).filter((r: any) => r && typeof r === 'object' && typeof r.contactName === 'string').map((r: any, i: number): Relance => ({
+            id: typeof r.id === 'string' && r.id.trim() ? r.id.slice(0, 80) : `rel-imp-${Date.now()}-${i}`,
+            dealId: typeof r.dealId === 'string' ? r.dealId.slice(0, 80) : '',
+            timeSlot: typeof r.timeSlot === 'string' ? r.timeSlot.slice(0, 20) : '10:00',
+            timeLabel: typeof r.timeLabel === 'string' ? r.timeLabel.slice(0, 40) : 'Aujourd’hui',
+            contactName: String(r.contactName).slice(0, 120),
+            contactRole: typeof r.contactRole === 'string' ? r.contactRole.slice(0, 120) : '',
+            companyName: typeof r.companyName === 'string' ? r.companyName.slice(0, 120) : '',
+            companyInitials: typeof r.companyInitials === 'string' ? r.companyInitials.slice(0, 3) : 'VC',
+            companyColor: typeof r.companyColor === 'string' ? r.companyColor.slice(0, 80) : 'bg-primary text-white',
+            avatarUrl: isSafeHttpsUrl(r.avatarUrl) ? r.avatarUrl : '',
+            dealTitle: typeof r.dealTitle === 'string' ? r.dealTitle.slice(0, 160) : '',
+            contextLine: typeof r.contextLine === 'string' ? r.contextLine.slice(0, 200) : '',
+            amount: clampNum(r.amount, 0),
+            statusTag: typeof r.statusTag === 'string' ? r.statusTag.slice(0, 60) : 'Relance',
+            actionType: r.actionType === 'email' || r.actionType === 'dossier' ? r.actionType : 'call',
+            actionLabel: typeof r.actionLabel === 'string' ? r.actionLabel.slice(0, 40) : 'Appeler',
+            done: Boolean(r.done),
+          }))
+        : relances;
+
+      const nextActivities: Activity[] = Array.isArray(parsed.activities)
+        ? parsed.activities.slice(0, MAX_RECORDS).filter((a: any) => a && typeof a === 'object' && typeof a.title === 'string').map((a: any, i: number): Activity => ({
+            id: typeof a.id === 'string' && a.id.trim() ? a.id.slice(0, 80) : `act-imp-${Date.now()}-${i}`,
+            dealId: typeof a.dealId === 'string' ? a.dealId.slice(0, 80) : undefined,
+            companyName: typeof a.companyName === 'string' ? a.companyName.slice(0, 120) : undefined,
+            type:
+              a.type === 'relance' || a.type === 'visio' || a.type === 'appel' || a.type === 'contrat'
+                ? a.type
+                : 'note',
+            title: String(a.title).slice(0, 160),
+            badgeText: typeof a.badgeText === 'string' ? a.badgeText.slice(0, 40) : 'Note interne',
+            badgeStyle:
+              a.badgeStyle === 'urgent' || a.badgeStyle === 'lilac' || a.badgeStyle === 'amber'
+                ? a.badgeStyle
+                : 'mint',
+            timestamp: typeof a.timestamp === 'string' ? a.timestamp.slice(0, 40) : 'Importé',
+            duration: typeof a.duration === 'string' ? a.duration.slice(0, 30) : undefined,
+            content: typeof a.content === 'string' ? a.content.slice(0, 4000) : '',
+            assignedTo: typeof a.assignedTo === 'string' ? a.assignedTo.slice(0, 120) : undefined,
+            attachment:
+              a.attachment && typeof a.attachment === 'object' && typeof a.attachment.name === 'string'
+                ? {
+                    name: String(a.attachment.name).slice(0, 160),
+                    size: typeof a.attachment.size === 'string' ? a.attachment.size.slice(0, 30) : '',
+                    time: typeof a.attachment.time === 'string' ? a.attachment.time.slice(0, 40) : undefined,
+                    path: isSafeStoragePath(a.attachment.path, user?.id) ? a.attachment.path : undefined,
+                  }
+                : undefined,
+            status: typeof a.status === 'string' ? a.status.slice(0, 40) : undefined,
+            author: typeof a.author === 'string' ? a.author.slice(0, 120) : profile.name,
+          }))
+        : activities;
+
       const nextProfile: UserProfile =
         parsed.profile && typeof parsed.profile === 'object'
-          ? { ...INITIAL_PROFILE, ...parsed.profile }
+          ? {
+              name: typeof parsed.profile.name === 'string' ? parsed.profile.name.slice(0, 120) : profile.name,
+              role: typeof parsed.profile.role === 'string' ? parsed.profile.role.slice(0, 120) : profile.role,
+              agency: typeof parsed.profile.agency === 'string' ? parsed.profile.agency.slice(0, 120) : profile.agency,
+              email: typeof parsed.profile.email === 'string' ? parsed.profile.email.slice(0, 160) : profile.email,
+              avatarUrl: isSafeHttpsUrl(parsed.profile.avatarUrl) ? parsed.profile.avatarUrl : profile.avatarUrl,
+              monthlyTarget: clampNum(parsed.profile.monthlyTarget, profile.monthlyTarget, 1000),
+              quarterlyTarget: clampNum(parsed.profile.quarterlyTarget, profile.quarterlyTarget, 1000),
+            }
           : profile;
 
       setDeals(nextDeals);
