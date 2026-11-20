@@ -627,22 +627,21 @@ export default function LandingPage() {
               Verve suit chaque mandat de la première prise de contact à la signature, pondère vos honoraires par
               étape et vous dit qui relancer aujourd’hui.
             </p>
-            <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row gap-3">
+            <div className="mt-7 sm:mt-8 flex flex-col items-start gap-3">
               <button
                 type="button"
                 onClick={openDemo}
-                className="h-12 px-6 rounded-lg btn-primary text-sm font-semibold cursor-pointer"
+                className="w-full sm:w-auto h-12 px-7 rounded-lg btn-primary text-sm font-semibold cursor-pointer shadow-sm"
               >
-                Explorer la démo
+                Explorer la démo gratuite
               </button>
-              <Link
-                href="/register"
-                className="h-12 px-6 inline-flex items-center justify-center rounded-lg bg-white border border-[#E4E7EC] hover:border-[#D0D5DD] text-sm font-semibold text-[#111827]"
-              >
-                Créer mon espace gratuit
-              </Link>
+              <p className="text-xs text-[#6B7280]">
+                Accès immédiat sans inscription ·{' '}
+                <Link href="/register" className="font-semibold text-[#047857] hover:underline">
+                  ou créer votre espace cloud
+                </Link>
+              </p>
             </div>
-            <p className="mt-4 text-xs text-[#6B7280]">La démo s’ouvre sans inscription, avec un cabinet déjà rempli.</p>
           </div>
 
           <LivePipeline />
@@ -748,21 +747,21 @@ export default function LandingPage() {
                 Treize dossiers, des relances du jour et un trimestre à boucler. Faites le tour en deux minutes.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <div className="flex flex-col items-stretch sm:items-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={openDemo}
-                className="h-12 px-6 rounded-lg text-sm font-semibold cursor-pointer transition-opacity hover:opacity-90"
+                className="h-12 px-7 rounded-lg text-sm font-semibold cursor-pointer transition-opacity hover:opacity-90"
                 style={{ backgroundColor: '#FFFFFF', color: '#053B2C' }}
               >
-                Explorer la démo
+                Explorer la démo gratuite
               </button>
               <Link
                 href="/register"
-                className="h-12 px-6 inline-flex items-center justify-center rounded-lg text-sm font-semibold"
-                style={{ border: '1px solid rgba(167,243,208,0.4)', color: '#FFFFFF' }}
+                className="text-xs font-medium text-center sm:text-right hover:underline"
+                style={{ color: '#A7F3D0' }}
               >
-                Créer mon espace
+                ou créer votre compte cloud gratuitement
               </Link>
             </div>
           </div>
@@ -770,11 +769,20 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-[#E4E7EC]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#6B7280] text-center sm:text-left">
+        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#6B7280] text-center md:text-left">
           <span>© 2026 Verve CRM. Conçu par Konrad Chirel.</span>
-          <div className="flex items-center gap-5">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             <Link href="/login" className="hover:text-[#111827]">Se connecter</Link>
             <Link href="/register" className="hover:text-[#111827]">Créer un espace</Link>
+            <Link href="/confidentialite" className="hover:text-[#111827]">Confidentialité</Link>
+            <Link href="/cgu" className="hover:text-[#111827]">CGU</Link>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('verve:open-cookie-settings'))}
+              className="hover:text-[#111827] cursor-pointer"
+            >
+              Gérer les cookies
+            </button>
             <a
               href="https://github.com/Konrad-Chirel/verve-crm"
               target="_blank"

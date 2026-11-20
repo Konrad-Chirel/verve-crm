@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, User, Building2, Briefcase, ArrowLeft, Sun, Moon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Building2, Briefcase, ArrowLeft, Sun, Moon, AlertCircle } from 'lucide-react';
 import { VerveAuthBrand, VerveAuthShowcase } from '@/components/layout/auth-showcase';
 import { useCRM } from '@/context/crm-context';
 import { createClient } from '@/lib/supabase/client';
@@ -18,20 +18,44 @@ export default function RegisterPage() {
   const [role, setRole] = useState('Associé gérant');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [honeypot, setHoneypot] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const mountedAtRef = useRef<number>(Date.now());
+  const lastAttemptAtRef = useRef<number>(0);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    // Anti-spam protections: honeypot + minimum human completion time + submit cooldown
+    if (honeypot.trim()) return;
+    const now = Date.now();
+    if (now - mountedAtRef.current < 800) {
+      setFormError('Vérification anti-spam : veuillez réessayer dans un instant.');
+      return;
+    }
+    if (now - lastAttemptAtRef.current < 4000) {
+      setFormError('Patientez quelques secondes avant de soumettre à nouveau.');
+      return;
+    }
+
     if (!name.trim() || !email.trim() || !password) {
-      showToast('Veuillez remplir tous les champs obligatoires.');
+      setFormError('Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
+      setFormError('Saisissez une adresse e-mail professionnelle valide.');
       return;
     }
 
     if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
-      showToast('Le mot de passe doit contenir au moins 8 caractères, une lettre et un chiffre.');
+      setFormError('Le mot de passe doit contenir au moins 8 caractères, une lettre et un chiffre.');
       return;
     }
+    lastAttemptAtRef.current = now;
 
     const trimmedName = name.trim();
     const trimmedAgency = agency.trim() || 'Atelier Nova';
@@ -214,7 +238,32 @@ export default function RegisterPage() {
               <div className="flex-1 h-px bg-[#E4E7EC]" />
             </div>
 
-            <form className="flex flex-col gap-4" onSubmit={handleRegister}>
+            <form className="flex flex-col gap-4" onSubmit={handleRegister} noValidate>
+              {formError && (
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-[#FFF1F2] border border-[#FECDD3] text-[13px] text-[#BE123C]"
+                >
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              {/* Anti-spam honeypot field */}
+              <div className="sr-only" aria-hidden="true">
+                <label htmlFor="reg-website">Site web</label>
+                <input
+                  id="reg-website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-[#111827]" htmlFor="reg-name">
@@ -302,7 +351,7 @@ export default function RegisterPage() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     required
-                    minLength={6}
+                    minLength={8}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -316,7 +365,9 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <p className="text-[11px] text-[#6B7280]">6 caractères minimum.</p>
+                <p className="text-[11px] text-[#6B7280]">
+                  8 caractères minimum, dont au moins une lettre et un chiffre.
+                </p>
               </div>
 
               <button
@@ -326,6 +377,18 @@ export default function RegisterPage() {
               >
                 {isSubmitting ? 'Création de votre espace…' : 'Créer mon espace CRM'}
               </button>
+
+              <p className="text-[11px] text-[#6B7280] text-center leading-relaxed">
+                En créant un compte, vous acceptez nos{' '}
+                <Link href="/cgu" className="text-[#047857] hover:underline font-medium">
+                  CGU
+                </Link>{' '}
+                et notre{' '}
+                <Link href="/confidentialite" className="text-[#047857] hover:underline font-medium">
+                  politique de confidentialité
+                </Link>
+                .
+              </p>
             </form>
 
             <p className="mt-7 text-center text-sm text-[#4B5563]">

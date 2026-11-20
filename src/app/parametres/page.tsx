@@ -96,7 +96,11 @@ export default function ParametresPage() {
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={profile.avatarUrl}
-                alt={name}
+                alt={`Photo de profil de ${name}`}
+                width={48}
+                height={48}
+                loading="lazy"
+                decoding="async"
                 referrerPolicy="no-referrer"
                 className="w-12 h-12 rounded-lg object-cover border border-[#E4E7EC] shrink-0"
               />

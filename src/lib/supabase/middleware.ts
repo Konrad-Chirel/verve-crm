@@ -5,15 +5,30 @@ const PUBLIC_PATHS = [
   '/',
   '/login',
   '/register',
+  '/confidentialite',
+  '/cgu',
   '/auth/callback',
   '/api/keepalive',
   '/icon',
+  '/apple-icon',
   '/opengraph-image',
+  '/twitter-image',
   '/robots.txt',
   '/sitemap.xml',
 ];
 
 export async function updateSession(request: NextRequest) {
+  // Enforce HTTPS in production environments behind reverse proxies (Vercel / Cloudflare)
+  const forwardedProto = request.headers.get('x-forwarded-proto');
+  const host = request.headers.get('host') || '';
+  const isLocalHost =
+    host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]');
+  if (process.env.NODE_ENV === 'production' && forwardedProto === 'http' && !isLocalHost) {
+    const httpsUrl = new URL(request.url);
+    httpsUrl.protocol = 'https:';
+    return NextResponse.redirect(httpsUrl, 308);
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });

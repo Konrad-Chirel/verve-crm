@@ -52,6 +52,8 @@ export function Avatar({
           <img
             src={src}
             alt={alt}
+            loading="lazy"
+            decoding="async"
             referrerPolicy="no-referrer"
             onError={() => setImgFailed(true)}
             className="w-full h-full object-cover"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -59,12 +59,17 @@ function LoginPageContent() {
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [honeypot, setHoneypot] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetSent, setResetSent] = useState(false);
+  const attemptTimestampsRef = useRef<number[]>([]);
+  const lastResetSentAtRef = useRef<number>(0);
+
+  const isValidEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val.trim());
 
   useEffect(() => {
     const err = searchParams.get('error');
@@ -86,10 +91,27 @@ function LoginPageContent() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Anti-spam honeypot trap
+    if (honeypot.trim()) return;
+
+    // Client-side rate limiting (max 5 attempts / 60s)
+    const now = Date.now();
+    attemptTimestampsRef.current = attemptTimestampsRef.current.filter((t) => now - t < 60_000);
+    if (attemptTimestampsRef.current.length >= 5) {
+      setError('Trop de tentatives rapprochées. Patientez quelques secondes avant de réessayer.');
+      return;
+    }
+
     if (!email.trim() || !password) {
       setError('Renseignez votre e-mail et votre mot de passe.');
       return;
     }
+    if (!isValidEmail(email)) {
+      setError('Saisissez une adresse e-mail valide (ex. nom@cabinet.fr).');
+      return;
+    }
+    attemptTimestampsRef.current.push(now);
 
     if (!supabase) {
       enableDemoMode();
@@ -129,8 +151,14 @@ function LoginPageContent() {
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!email.trim()) {
-      setError('Renseignez l’e-mail de votre compte.');
+    if (honeypot.trim()) return;
+    if (!email.trim() || !isValidEmail(email)) {
+      setError('Renseignez une adresse e-mail valide.');
+      return;
+    }
+    const now = Date.now();
+    if (now - lastResetSentAtRef.current < 45_000) {
+      setError('Un lien vient déjà d’être envoyé. Patientez 45 secondes avant de réessayer.');
       return;
     }
     if (!supabase) {
@@ -145,6 +173,7 @@ function LoginPageContent() {
       if (resetError) {
         setError(resetError.message);
       } else {
+        lastResetSentAtRef.current = now;
         setResetSent(true);
       }
     } catch (err: any) {
@@ -288,6 +317,20 @@ function LoginPageContent() {
                 </div>
 
                 <form className="flex flex-col gap-4" onSubmit={handleLogin} noValidate>
+                  {/* Anti-spam honeypot field (invisible to humans) */}
+                  <div className="sr-only" aria-hidden="true">
+                    <label htmlFor="login-website">Site web</label>
+                    <input
+                      id="login-website"
+                      name="website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={honeypot}
+                      onChange={(e) => setHoneypot(e.target.value)}
+                    />
+                  </div>
+
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-[#111827]" htmlFor="email">
                       E-mail

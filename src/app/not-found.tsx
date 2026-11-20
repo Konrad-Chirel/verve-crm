@@ -24,18 +24,18 @@ export default function NotFound() {
 
         <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <Link
-            href="/dashboard"
+            href="/"
             className="h-9 px-4 rounded-lg bg-[#047857] hover:bg-[#065F46] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Retour à la synthèse</span>
+            <span>Retour à l’accueil</span>
           </Link>
           <Link
-            href="/pipeline"
+            href="/dashboard"
             className="h-9 px-4 rounded-lg bg-white hover:bg-[#F3F4F6] text-[#111827] border border-[#E4E7EC] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"
           >
             <Kanban className="w-3.5 h-3.5 text-[#047857]" />
-            <span>Ouvrir le pipeline</span>
+            <span>Ouvrir mon espace</span>
           </Link>
         </div>
       </div>

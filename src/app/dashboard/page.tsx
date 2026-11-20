@@ -112,7 +112,7 @@ export default function DashboardPage() {
       companyInitials: newRelanceCompany.trim().slice(0, 2).toUpperCase(),
       companyColor: 'bg-[#ECFDF5] text-[#047857]',
       avatarUrl:
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&auto=format&fit=crop&fm=webp&q=75',
       dealTitle: newRelanceTitle.trim() || 'Point d’avancement proposition',
       contextLine: 'Suivi programmé manuellement',
       amount: matchedDeal ? matchedDeal.amount : 18000,

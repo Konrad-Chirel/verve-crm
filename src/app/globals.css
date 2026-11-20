@@ -167,23 +167,23 @@ html.dark .ring-white {
   --tw-ring-color: #121A24 !important;
 }
 
-/* Typography */
+/* Typography — WCAG AA >= 4.5:1 contrast on #0B1017 and #121A24 */
 html.dark .text-\[\#111827\],
 html.dark .text-text-primary,
 html.dark .hover\:text-\[\#111827\]:hover,
 html.dark .group:hover .group-hover\:text-\[\#111827\] {
-  color: #F1F5F9 !important;
+  color: #F8FAFC !important;
 }
 
 html.dark .text-\[\#4B5563\],
 html.dark .text-text-secondary {
-  color: #94A3B8 !important;
+  color: #CBD5E1 !important;
 }
 
 html.dark .text-\[\#6B7280\],
 html.dark .text-\[\#9CA3AF\],
 html.dark .text-text-muted {
-  color: #64748B !important;
+  color: #94A3B8 !important;
 }
 
 /* Emerald Accents & Badges in Dark Mode */

@@ -5,6 +5,7 @@ import { BRAND } from '@/lib/brand';
 import { CRMProvider } from '@/context/crm-context';
 import { ModalProvider } from '@/context/modal-context';
 import { AppShell } from '@/components/layout/app-shell';
+import { CookieConsent } from '@/components/layout/cookie-consent';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -21,7 +22,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://verve-crm.vercel.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://verve-crm-tau.vercel.app'),
   title: {
     default: `${BRAND.name} — ${BRAND.subtitle}`,
     template: `%s | ${BRAND.name}`,
@@ -78,6 +79,7 @@ export default function RootLayout({
         <CRMProvider>
           <ModalProvider>
             <AppShell>{children}</AppShell>
+            <CookieConsent />
           </ModalProvider>
         </CRMProvider>
       </body>

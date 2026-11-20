@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://verve-crm.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://verve-crm-tau.vercel.app';
   const now = new Date();
 
   return [
@@ -24,28 +24,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/dashboard`,
+      url: `${baseUrl}/confidentialite`,
       lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
+      changeFrequency: 'yearly',
+      priority: 0.5,
     },
     {
-      url: `${baseUrl}/pipeline`,
+      url: `${baseUrl}/cgu`,
       lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/clients`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/rapports`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.7,
+      changeFrequency: 'yearly',
+      priority: 0.5,
     },
   ];
 }
