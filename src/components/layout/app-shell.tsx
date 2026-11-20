@@ -9,14 +9,22 @@ import { NewDealModal } from '@/components/modals/new-deal-modal';
 import { NewCompanyModal } from '@/components/modals/new-company-modal';
 import { CommandPalette } from '@/components/layout/command-palette';
 
-const PUBLIC_SHELL_FREE_ROUTES = ['/login', '/register', '/confidentialite', '/cgu'];
+const APP_SHELL_ROUTES = [
+  '/dashboard',
+  '/pipeline',
+  '/deals',
+  '/clients',
+  '/rapports',
+  '/parametres',
+];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage =
-    pathname === '/' || PUBLIC_SHELL_FREE_ROUTES.some((route) => pathname.startsWith(route));
+  const isAppRoute = APP_SHELL_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
 
-  if (isAuthPage) {
+  if (!isAppRoute) {
     return <>{children}</>;
   }
 

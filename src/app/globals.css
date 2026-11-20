@@ -324,3 +324,118 @@ html.dark ::-webkit-scrollbar-thumb {
 html.dark ::-webkit-scrollbar-thumb:hover {
   background: #3D526D;
 }
+
+/* ============================================================================
+   404 MASCOT FLUID ANIMATIONS (60fps GPU-composited)
+   ============================================================================ */
+@keyframes verve-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1.5deg);
+  }
+}
+
+@keyframes verve-shadow {
+  0%, 100% {
+    transform: scaleX(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scaleX(0.76);
+    opacity: 0.16;
+  }
+}
+
+@keyframes verve-sweep {
+  0%, 100% {
+    transform: rotate(-10deg) translate(0px, 0px);
+  }
+  50% {
+    transform: rotate(12deg) translate(5px, -4px);
+  }
+}
+
+@keyframes verve-drift-a {
+  0%, 100% {
+    transform: translate(0px, 0px) rotate(-6deg);
+  }
+  50% {
+    transform: translate(-6px, -10px) rotate(4deg);
+  }
+}
+
+@keyframes verve-drift-b {
+  0%, 100% {
+    transform: translate(0px, 0px) rotate(8deg);
+  }
+  50% {
+    transform: translate(7px, -12px) rotate(-5deg);
+  }
+}
+
+@keyframes verve-blink {
+  0%, 44%, 48%, 100% {
+    transform: scaleY(1);
+  }
+  46% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes verve-hop {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  35% {
+    transform: translateY(-18px) scale(1.06) rotate(-4deg);
+  }
+  70% {
+    transform: translateY(2px) scale(0.96) rotate(3deg);
+  }
+}
+
+.animate-verve-float {
+  animation: verve-float 3.8s ease-in-out infinite;
+}
+
+.animate-verve-shadow {
+  animation: verve-shadow 3.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-verve-sweep {
+  animation: verve-sweep 3.2s ease-in-out infinite;
+  transform-origin: 145px 128px;
+}
+
+.animate-verve-drift-a {
+  animation: verve-drift-a 4.8s ease-in-out infinite;
+}
+
+.animate-verve-drift-b {
+  animation: verve-drift-b 5.4s ease-in-out infinite;
+}
+
+.animate-verve-blink {
+  animation: verve-blink 4.6s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+.animate-verve-hop {
+  animation: verve-hop 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-verve-float,
+  .animate-verve-shadow,
+  .animate-verve-sweep,
+  .animate-verve-drift-a,
+  .animate-verve-drift-b,
+  .animate-verve-blink,
+  .animate-verve-hop {
+    animation: none !important;
+  }
+}
